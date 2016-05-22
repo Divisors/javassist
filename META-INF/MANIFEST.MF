@@ -1,0 +1,39 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Javassist
+Bundle-SymbolicName: javassist
+Bundle-Version: 3.20.0.GA
+Bundle-ClassPath: javassist.jar
+Bundle-Vendor: Shigeru Chiba
+Export-Package: javassist,
+ javassist.bytecode,
+ javassist.bytecode.analysis,
+ javassist.bytecode.annotation,
+ javassist.bytecode.stackmap,
+ javassist.compiler,
+ javassist.compiler.ast,
+ javassist.convert,
+ javassist.expr,
+ javassist.runtime,
+ javassist.scopedpool,
+ javassist.tools,
+ javassist.tools.reflect,
+ javassist.tools.rmi,
+ javassist.tools.web,
+ javassist.util,
+ javassist.util.proxy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Tool: Bnd-0.0.357
+Ignore-Package: com.sun.jdi.event,com.sun.jdi,com.sun.jdi.request,com.sun.jdi.connect
+Bundle-Description: Javassist (JAVA programming ASSISTant) makes Java bytecode manipulation    simple.  It is a class library for editing bytecodes in Java.
+Created-By: Apache Maven Bundle Plugin
+Bundle-License: http://www.mozilla.org/MPL/MPL-1.1.html, http://www.gnu.org/licenses/lgpl-2.1.html, http://www.apache.org/licenses/
+Ant-Version: Apache Ant 1.9.5
+Built-By: chiba
+Main-Class: javassist.CtClass
+Specification-Title: Javassist
+Build-Jdk: 1.8.0_25
+Specification-Vendor: Shigeru Chiba, www.javassist.org
+Specification-Version: 3.20.0-GA
+Bnd-LastModified: 1435158178431
+Require-Bundle: org.junit;bundle-version="4.12.0"
