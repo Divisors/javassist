@@ -59,7 +59,7 @@ public class MethodInfo {
     int name;
     String cachedName;
     int descriptor;
-    ArrayList attribute; // may be null
+    ArrayList<AttributeInfo> attribute; // may be null
 
     /**
      * If this value is true, Javassist maintains a <code>StackMap</code> attribute
@@ -129,7 +129,7 @@ public class MethodInfo {
      * @see Descriptor
      */
     public MethodInfo(ConstPool cp, String methodname, MethodInfo src,
-            Map classnameMap) throws BadBytecode {
+            Map<String, String> classnameMap) throws BadBytecode {
         this(cp);
         read(src, methodname, classnameMap);
     }
@@ -157,7 +157,7 @@ public class MethodInfo {
     }
 
     void prune(ConstPool cp) {
-        ArrayList newAttributes = new ArrayList();
+        ArrayList<AttributeInfo> newAttributes = new ArrayList<>();
 
         AttributeInfo invisibleAnnotations
             = getAttribute(AnnotationsAttribute.invisibleTag);
@@ -304,9 +304,9 @@ public class MethodInfo {
      * @return a list of <code>AttributeInfo</code> objects.
      * @see AttributeInfo
      */
-    public List getAttributes() {
+    public List<AttributeInfo> getAttributes() {
         if (attribute == null)
-            attribute = new ArrayList();
+            attribute = new ArrayList<>();
 
         return attribute;
     }
@@ -331,7 +331,7 @@ public class MethodInfo {
      */
     public void addAttribute(AttributeInfo info) {
         if (attribute == null)
-            attribute = new ArrayList();
+            attribute = new ArrayList<>();
 
         AttributeInfo.remove(attribute, info.getName());
         attribute.add(info);
@@ -375,7 +375,7 @@ public class MethodInfo {
     public void setExceptionsAttribute(ExceptionsAttribute cattr) {
         removeExceptionsAttribute();
         if (attribute == null)
-            attribute = new ArrayList();
+            attribute = new ArrayList<>();
 
         attribute.add(cattr);
     }
@@ -397,7 +397,7 @@ public class MethodInfo {
     public void setCodeAttribute(CodeAttribute cattr) {
         removeCodeAttribute();
         if (attribute == null)
-            attribute = new ArrayList();
+            attribute = new ArrayList<>();
 
         attribute.add(cattr);
     }
@@ -520,7 +520,7 @@ public class MethodInfo {
         }
     }
 
-    private void read(MethodInfo src, String methodname, Map classnames)
+    private void read(MethodInfo src, String methodname, Map<String, String> classnames)
             throws BadBytecode {
         ConstPool destCp = constPool;
         accessFlags = src.accessFlags;
@@ -531,7 +531,7 @@ public class MethodInfo {
         String desc2 = Descriptor.rename(desc, classnames);
         descriptor = destCp.addUtf8Info(desc2);
 
-        attribute = new ArrayList();
+        attribute = new ArrayList<>();
         ExceptionsAttribute eattr = src.getExceptionsAttribute();
         if (eattr != null)
             attribute.add(eattr.copy(destCp, classnames));
@@ -546,7 +546,7 @@ public class MethodInfo {
         name = in.readUnsignedShort();
         descriptor = in.readUnsignedShort();
         int n = in.readUnsignedShort();
-        attribute = new ArrayList();
+        attribute = new ArrayList<>();
         for (int i = 0; i < n; ++i)
             attribute.add(AttributeInfo.read(constPool, in));
     }

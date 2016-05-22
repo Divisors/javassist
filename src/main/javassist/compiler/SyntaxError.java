@@ -17,7 +17,9 @@
 package javassist.compiler;
 
 public class SyntaxError extends CompileError {
-    public SyntaxError(Lex lexer) {
+	private static final long serialVersionUID = 490889194191819310L;
+
+	public SyntaxError(Lex lexer) {
         super("syntax error near \"" + lexer.getTextAround() + "\"", lexer);
     }
 }

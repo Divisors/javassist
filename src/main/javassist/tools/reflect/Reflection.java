@@ -16,11 +16,19 @@
 
 package javassist.tools.reflect;
 
-import java.util.Iterator;
-import javassist.*;
+import javassist.CannotCompileException;
+import javassist.ClassPool;
+import javassist.CodeConverter;
+import javassist.CtClass;
+import javassist.CtField;
+import javassist.CtMethod;
 import javassist.CtMethod.ConstParameter;
-import javassist.bytecode.ClassFile;
+import javassist.CtNewMethod;
+import javassist.Modifier;
+import javassist.NotFoundException;
+import javassist.Translator;
 import javassist.bytecode.BadBytecode;
+import javassist.bytecode.ClassFile;
 import javassist.bytecode.MethodInfo;
 
 /**
@@ -176,10 +184,8 @@ public class Reflection implements Translator {
      * @see javassist.tools.reflect.Metaobject
      * @see javassist.tools.reflect.ClassMetaobject
      */
-    public boolean makeReflective(Class clazz,
-                                  Class metaobject, Class metaclass)
-        throws CannotCompileException, NotFoundException
-    {
+	public boolean makeReflective(Class<?> clazz, Class<?> metaobject, Class<?> metaclass)
+			throws CannotCompileException, NotFoundException {
         return makeReflective(clazz.getName(), metaobject.getName(),
                               metaclass.getName());
     }
@@ -394,10 +400,7 @@ public class Reflection implements Translator {
         if (ClassFile.MAJOR_VERSION < ClassFile.JAVA_6)
             return;
 
-        Iterator methods = cf.getMethods().iterator();
-        while (methods.hasNext()) {
-            MethodInfo mi = (MethodInfo)methods.next();
-            mi.rebuildStackMap(classPool);
-        }
+        for (MethodInfo method : cf.getMethods())
+        	method.rebuildStackMap(classPool);
     }
 }

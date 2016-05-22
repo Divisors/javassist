@@ -16,10 +16,16 @@
 
 package javassist;
 
-import javassist.bytecode.*;
-import javassist.compiler.JvstCodeGen;
-import java.util.Hashtable;
+import java.util.concurrent.ConcurrentHashMap;
+
 import javassist.CtMethod.ConstParameter;
+import javassist.bytecode.AccessFlag;
+import javassist.bytecode.BadBytecode;
+import javassist.bytecode.Bytecode;
+import javassist.bytecode.ClassFile;
+import javassist.bytecode.MethodInfo;
+import javassist.bytecode.SyntheticAttribute;
+import javassist.compiler.JvstCodeGen;
 
 class CtNewWrappedMethod {
 
@@ -29,21 +35,16 @@ class CtNewWrappedMethod {
                                    CtClass[] parameterTypes,
                                    CtClass[] exceptionTypes,
                                    CtMethod body, ConstParameter constParam,
-                                   CtClass declaring)
-        throws CannotCompileException
-    {
-        CtMethod mt = new CtMethod(returnType, mname, parameterTypes,
-                                   declaring);
+                                   CtClass declaring) throws CannotCompileException {
+        CtMethod mt = new CtMethod(returnType, mname, parameterTypes, declaring);
         mt.setModifiers(body.getModifiers());
         try {
             mt.setExceptionTypes(exceptionTypes);
-        }
-        catch (NotFoundException e) {
+        } catch (NotFoundException e) {
             throw new CannotCompileException(e);
         }
 
-        Bytecode code = makeBody(declaring, declaring.getClassFile2(), body,
-                                 parameterTypes, returnType, constParam);
+        Bytecode code = makeBody(declaring, declaring.getClassFile2(), body, parameterTypes, returnType, constParam);
         MethodInfo minfo = mt.getMethodInfo2();
         minfo.setCodeAttribute(code.toCodeAttribute());
         // a stack map has been already created. 
@@ -55,8 +56,7 @@ class CtNewWrappedMethod {
                              CtClass[] parameters,
                              CtClass returnType,
                              ConstParameter cparam)
-        throws CannotCompileException
-    {
+        throws CannotCompileException {
         boolean isStatic = Modifier.isStatic(wrappedBody.getModifiers());
         Bytecode code = new Bytecode(classfile.getConstPool(), 0, 0);
         int stacksize = makeBody0(clazz, classfile, wrappedBody, isStatic,
@@ -74,24 +74,20 @@ class CtNewWrappedMethod {
                                    boolean isStatic, CtClass[] parameters,
                                    CtClass returnType, ConstParameter cparam,
                                    Bytecode code)
-        throws CannotCompileException
-    {
+        throws CannotCompileException {
         if (!(clazz instanceof CtClassType))
-            throw new CannotCompileException("bad declaring class"
-                                             + clazz.getName());
+            throw new CannotCompileException("bad declaring class" + clazz.getName());
 
         if (!isStatic)
             code.addAload(0);
 
-        int stacksize = compileParameterList(code, parameters,
-                                             (isStatic ? 0 : 1));
+        int stacksize = compileParameterList(code, parameters, (isStatic ? 0 : 1));
         int stacksize2;
         String desc;
         if (cparam == null) {
             stacksize2 = 0;
             desc = ConstParameter.defaultDescriptor();
-        }
-        else {
+        } else {
             stacksize2 = cparam.compile(code);
             desc = cparam.descriptor();
         }
@@ -105,8 +101,7 @@ class CtNewWrappedMethod {
             /* if an exception is thrown below, the method added above
              * should be removed. (future work :<)
              */
-        }
-        catch (BadBytecode e) {
+        } catch (BadBytecode e) {
             throw new CannotCompileException(e);
         }
 
@@ -137,9 +132,8 @@ class CtNewWrappedMethod {
     private static String addBodyMethod(CtClassType clazz,
                                         ClassFile classfile,
                                         CtMethod src)
-        throws BadBytecode, CannotCompileException
-    {
-        Hashtable bodies = clazz.getHiddenMethods();
+        throws BadBytecode, CannotCompileException {
+        ConcurrentHashMap<CtMethod, String> bodies = clazz.getHiddenMethods();
         String bodyname = (String)bodies.get(src);
         if (bodyname == null) {
             do {

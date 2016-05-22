@@ -15,10 +15,8 @@
  */
 package javassist.bytecode.analysis;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import javassist.ClassPool;
@@ -44,7 +42,7 @@ public class Type {
     private final CtClass clazz;
     private final boolean special;
 
-    private static final Map prims = new IdentityHashMap();
+    private static final Map<CtClass, Type> prims = new IdentityHashMap<>();
     /** Represents the double primitive type */
     public static final Type DOUBLE = new Type(CtClass.doubleType);
     /** Represents the boolean primitive type */
@@ -451,7 +449,7 @@ public class Type {
 
         // If its Object, then try and find a common interface(s)
         if (superClass.getSuperclass() == null) {
-            Map interfaces = findCommonInterfaces(type);
+            Map<String, CtClass> interfaces = findCommonInterfaces(type);
             if (interfaces.size() == 1)
                 return new Type((CtClass) interfaces.values().iterator().next());
             if (interfaces.size() > 1)
@@ -462,7 +460,7 @@ public class Type {
         }
 
         // Check for a common interface that is not on the found supertype
-        Map commonDeclared = findExclusiveDeclaredInterfaces(type, superClass);
+        Map<String, CtClass> commonDeclared = findExclusiveDeclaredInterfaces(type, superClass);
         if (commonDeclared.size() > 0) {
             return new MultiType(commonDeclared, new Type(superClass));
         }
@@ -470,66 +468,56 @@ public class Type {
         return new Type(superClass);
     }
 
-    private Map findCommonInterfaces(Type type) {
-        Map typeMap = getAllInterfaces(type.clazz, null);
-        Map thisMap = getAllInterfaces(this.clazz, null);
+	private Map<String, CtClass> findCommonInterfaces(Type type) {
+		Map<String, CtClass> typeMap = getAllInterfaces(type.clazz, null);
+		Map<String, CtClass> thisMap = getAllInterfaces(this.clazz, null);
+		
+		return findCommonInterfaces(typeMap, thisMap);
+	}
 
-        return findCommonInterfaces(typeMap, thisMap);
-    }
-
-    private Map findExclusiveDeclaredInterfaces(Type type, CtClass exclude) {
-        Map typeMap = getDeclaredInterfaces(type.clazz, null);
-        Map thisMap = getDeclaredInterfaces(this.clazz, null);
-        Map excludeMap = getAllInterfaces(exclude, null);
-
-        Iterator i = excludeMap.keySet().iterator();
-        while (i.hasNext()) {
-            Object intf = i.next();
-            typeMap.remove(intf);
-            thisMap.remove(intf);
-        }
-
-        return findCommonInterfaces(typeMap, thisMap);
-    }
+	private Map<String, CtClass> findExclusiveDeclaredInterfaces(Type type, CtClass exclude) {
+		Map<String, CtClass> typeMap = getDeclaredInterfaces(type.clazz, null);
+		Map<String, CtClass> thisMap = getDeclaredInterfaces(this.clazz, null);
+		Map<String, CtClass> excludeMap = getAllInterfaces(exclude, null);
+		
+		typeMap.keySet().removeAll(excludeMap.keySet());
+		thisMap.keySet().removeAll(excludeMap.keySet());
+		
+		return findCommonInterfaces(typeMap, thisMap);
+	}
 
 
-    Map findCommonInterfaces(Map typeMap, Map alterMap) {
-        Iterator i = alterMap.keySet().iterator();
-        while (i.hasNext()) {
-            if (! typeMap.containsKey(i.next()))
-                i.remove();
-        }
-
-        // Reduce to subinterfaces
-        // This does not need to be recursive since we make a copy,
-        // and that copy contains all super types for the whole hierarchy
-        i = new ArrayList(alterMap.values()).iterator();
-        while (i.hasNext()) {
-            CtClass intf = (CtClass) i.next();
-            CtClass[] interfaces;
-            try {
-                interfaces = intf.getInterfaces();
-            } catch (NotFoundException e) {
-                throw new RuntimeException(e);
-            }
-
-            for (int c = 0; c < interfaces.length; c++)
-                alterMap.remove(interfaces[c].getName());
-        }
-
-        return alterMap;
-    }
-
-    Map getAllInterfaces(CtClass clazz, Map map) {
+	Map<String, CtClass> findCommonInterfaces(Map<String, CtClass> typeMap, Map<String, CtClass> alterMap) {
+		alterMap.keySet().removeAll(typeMap.keySet());
+		
+		// Reduce to subinterfaces
+		// This does not need to be recursive since we make a copy,
+		// and that copy contains all super types for the whole hierarchy
+		for (CtClass intf : alterMap.values()) {
+			CtClass[] interfaces;
+			try {
+				interfaces = intf.getInterfaces();
+			} catch (NotFoundException e) {
+				throw new RuntimeException(e);
+			}
+			
+			for (int c = 0; c < interfaces.length; c++)
+				alterMap.remove(interfaces[c].getName());
+		}
+		
+		return alterMap;
+	}
+	
+    Map<String, CtClass> getAllInterfaces(CtClass clazz, Map<String, CtClass> map) {
         if (map == null)
-            map = new HashMap();
+            map = new HashMap<>();
 
         if (clazz.isInterface())
             map.put(clazz.getName(), clazz);
         do {
             try {
                 CtClass[] interfaces = clazz.getInterfaces();
-                for (int i = 0; i < interfaces.length; i++) {
+                for (int i = 0, n = interfaces.length; i < n; i++) {
                     CtClass intf = interfaces[i];
                     map.put(intf.getName(), intf);
                     getAllInterfaces(intf, map);
@@ -544,9 +532,9 @@ public class Type {
         return map;
     }
 
-    Map getDeclaredInterfaces(CtClass clazz, Map map) {
+    Map<String, CtClass> getDeclaredInterfaces(CtClass clazz, Map<String, CtClass> map) {
         if (map == null)
-            map = new HashMap();
+            map = new HashMap<>();
 
         if (clazz.isInterface())
             map.put(clazz.getName(), clazz);

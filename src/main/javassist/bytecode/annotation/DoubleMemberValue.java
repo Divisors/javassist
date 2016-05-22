@@ -60,11 +60,13 @@ public class DoubleMemberValue extends MemberValue {
         setValue(0.0);
     }
 
-    Object getValue(ClassLoader cl, ClassPool cp, Method m) {
-        return new Double(getValue());
+    @Override
+    Double getValue(ClassLoader cl, ClassPool cp, Method m) {
+        return getValue();
     }
 
-    Class getType(ClassLoader cl) {
+    @Override
+    Class<?> getType(ClassLoader cl) {
         return double.class;
     }
 

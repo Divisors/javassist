@@ -37,11 +37,11 @@ import javassist.NotFoundException;
 public class ScopedClassPool extends ClassPool {
     protected ScopedClassPoolRepository repository;
 
-    protected WeakReference classLoader;
+    protected WeakReference<ClassLoader> classLoader;
 
     protected LoaderClassPath classPath;
 
-    protected SoftValueHashMap softcache = new SoftValueHashMap();
+    protected SoftValueHashMap<String, CtClass> softcache = new SoftValueHashMap<>();
     
     boolean isBootstrapCl = true;
 
@@ -82,7 +82,7 @@ public class ScopedClassPool extends ClassPool {
     {
        super(src);
        this.repository = repository;
-       this.classLoader = new WeakReference(cl);
+       this.classLoader = new WeakReference<>(cl);
        if (cl != null) {
            classPath = new LoaderClassPath(cl);
            this.insertClassPath(classPath);
@@ -173,12 +173,10 @@ public class ScopedClassPool extends ClassPool {
                 final int lastIndex = classname.lastIndexOf('$');
                 String classResourceName = null;
                 if (lastIndex < 0) {
-                    classResourceName = classname.replaceAll("[\\.]", "/")
-                            + ".class";
-                }
-                else {
+                    classResourceName = classname.replace('.', '/') + ".class";
+                } else {
                     classResourceName = classname.substring(0, lastIndex)
-                            .replaceAll("[\\.]", "/")
+                            .replace('.', '/')
                             + classname.substring(lastIndex) + ".class";
                 }
 
@@ -186,9 +184,9 @@ public class ScopedClassPool extends ClassPool {
             }
 
             if (!isLocal) {
-                Map registeredCLs = repository.getRegisteredCLs();
+                Map<?, ScopedClassPool> registeredCLs = repository.getRegisteredCLs();
                 synchronized (registeredCLs) {
-                    Iterator it = registeredCLs.values().iterator();
+                    Iterator<ScopedClassPool> it = registeredCLs.values().iterator();
                     while (it.hasNext()) {
                         ScopedClassPool pool = (ScopedClassPool)it.next();
                         if (pool.isUnloadedClassLoader()) {
@@ -222,8 +220,7 @@ public class ScopedClassPool extends ClassPool {
     protected void cacheCtClass(String classname, CtClass c, boolean dynamic) {
         if (dynamic) {
             super.cacheCtClass(classname, c, dynamic);
-        }
-        else {
+        } else {
             if (repository.isPrune())
                 c.prune();
             softcache.put(classname, c);
@@ -248,11 +245,11 @@ public class ScopedClassPool extends ClassPool {
      * @return the cached class
      */
     protected CtClass getCachedLocally(String classname) {
-        CtClass cached = (CtClass)classes.get(classname);
+        CtClass cached = classes.get(classname);
         if (cached != null)
             return cached;
         synchronized (softcache) {
-            return (CtClass)softcache.get(classname);
+            return softcache.get(classname);
         }
     }
 
@@ -265,10 +262,9 @@ public class ScopedClassPool extends ClassPool {
      * @throws NotFoundException
      *             when the class is not found
      */
-    public synchronized CtClass getLocally(String classname)
-            throws NotFoundException {
+    public synchronized CtClass getLocally(String classname) throws NotFoundException {
         softcache.remove(classname);
-        CtClass clazz = (CtClass)classes.get(classname);
+        CtClass clazz = classes.get(classname);
         if (clazz == null) {
             clazz = createCtClass(classname, true);
             if (clazz == null)
@@ -289,8 +285,7 @@ public class ScopedClassPool extends ClassPool {
      * @throws CannotCompileException
      *             for any error
      */
-    public Class toClass(CtClass ct, ClassLoader loader, ProtectionDomain domain)
-            throws CannotCompileException {
+	public Class<?> toClass(CtClass ct, ClassLoader loader, ProtectionDomain domain) throws CannotCompileException {
         // We need to pass up the classloader stored in this pool, as the
         // default implementation uses the Thread context cl.
         // In the case of JSP's in Tomcat,

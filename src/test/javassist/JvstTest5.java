@@ -155,8 +155,8 @@ public class JvstTest5 extends JvstTestRoot {
         ConstPool constpool = ccFile.getConstPool();
          
         AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-        javassist.bytecode.annotation.Annotation entityAnno
-            = new javassist.bytecode.annotation.Annotation("test5.Entity", constpool);
+        javassist.bytecode.annotation.CtAnnotation entityAnno
+            = new javassist.bytecode.annotation.CtAnnotation("test5.Entity", constpool);
             // = new javassist.bytecode.annotation.Annotation(constpool, ec);
 
         entityAnno.addMemberValue("value", new javassist.bytecode.annotation.ArrayMemberValue(constpool));

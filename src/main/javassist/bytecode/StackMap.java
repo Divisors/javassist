@@ -22,9 +22,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import javassist.CannotCompileException;
-import javassist.bytecode.StackMapTable.InsertLocal;
-import javassist.bytecode.StackMapTable.NewRemover;
-import javassist.bytecode.StackMapTable.Shifter;
 
 /**
  * Another <code>stack_map</code> attribute defined in CLDC 1.1 for J2ME.
@@ -116,7 +113,7 @@ public class StackMap extends AttributeInfo {
     /**
      * Makes a copy.
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
+    public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
         Copier copier = new Copier(this, newCp, classnames);
         copier.visit();
         return copier.getStackMap();
@@ -224,9 +221,9 @@ public class StackMap extends AttributeInfo {
     static class Copier extends Walker {
         byte[] dest;
         ConstPool srcCp, destCp;
-        Map classnames;
+        Map<String, String> classnames;
 
-        Copier(StackMap map, ConstPool newCp, Map classnames) {
+        Copier(StackMap map, ConstPool newCp, Map<String, String> classnames) {
             super(map);
             srcCp = map.getConstPool();
             dest = new byte[info.length];

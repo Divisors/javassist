@@ -16,11 +16,36 @@
 
 package javassist.compiler;
 
-import javassist.*;
-import javassist.bytecode.*;
-import javassist.compiler.ast.*;
-
 import java.util.ArrayList;
+import java.util.List;
+
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtField;
+import javassist.CtMethod;
+import javassist.Modifier;
+import javassist.NotFoundException;
+import javassist.bytecode.AccessFlag;
+import javassist.bytecode.Bytecode;
+import javassist.bytecode.ClassFile;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.Descriptor;
+import javassist.bytecode.FieldInfo;
+import javassist.bytecode.MethodInfo;
+import javassist.bytecode.Opcode;
+import javassist.compiler.ast.ASTList;
+import javassist.compiler.ast.ASTree;
+import javassist.compiler.ast.ArrayInit;
+import javassist.compiler.ast.CallExpr;
+import javassist.compiler.ast.Declarator;
+import javassist.compiler.ast.Expr;
+import javassist.compiler.ast.Keyword;
+import javassist.compiler.ast.Member;
+import javassist.compiler.ast.MethodDecl;
+import javassist.compiler.ast.NewExpr;
+import javassist.compiler.ast.Pair;
+import javassist.compiler.ast.Stmnt;
+import javassist.compiler.ast.Symbol;
 
 /* Code generator methods depending on javassist.* classes.
  */
@@ -83,13 +108,13 @@ public class MemberCodeGen extends CodeGen {
     }
 
     static class JsrHook extends ReturnHook {
-        ArrayList jsrList;
+        ArrayList<int[]> jsrList;
         CodeGen cgen;
         int var;
 
         JsrHook(CodeGen gen) {
             super(gen);
-            jsrList = new ArrayList();
+            jsrList = new ArrayList<>();
             cgen = gen;
             var = -1;
         }
@@ -194,7 +219,7 @@ public class MemberCodeGen extends CodeGen {
 
         ASTList catchList = (ASTList)st.getRight().getLeft();
         Stmnt finallyBlock = (Stmnt)st.getRight().getRight().getLeft();
-        ArrayList gotoList = new ArrayList(); 
+        List<Integer> gotoList = new ArrayList<>(); 
 
         JsrHook jsrHook = null;
         if (finallyBlock != null)
@@ -270,7 +295,7 @@ public class MemberCodeGen extends CodeGen {
     /**
      * Adds a finally clause for earch return statement.
      */
-    private void addFinally(ArrayList returnList, Stmnt finallyBlock)
+    private void addFinally(ArrayList<int[]> returnList, Stmnt finallyBlock)
         throws CompileError
     {
         Bytecode bc = bytecode;
@@ -563,7 +588,8 @@ public class MemberCodeGen extends CodeGen {
             isStatic = true;
         }
 
-        int stack = bytecode.getStackDepth();
+        @SuppressWarnings("unused")
+		int stack = bytecode.getStackDepth();
 
         // generate code for evaluating arguments.
         atMethodArgs(args, types, dims, cnames);
@@ -685,7 +711,7 @@ public class MemberCodeGen extends CodeGen {
                                + " is private");
     }
 
-    /*
+    /**
      * Finds (or adds if necessary) a hidden constructor if the given
      * constructor is in an enclosing class.
      *
@@ -694,19 +720,15 @@ public class MemberCodeGen extends CodeGen {
      * @param minfo         the method info of the constructor.
      * @return the descriptor of the hidden constructor.
      */
-    protected String getAccessibleConstructor(String desc, CtClass declClass,
-                                              MethodInfo minfo)
-        throws CompileError
-    {
-        if (isEnclosing(declClass, thisClass)) {
-            AccessorMaker maker = declClass.getAccessorMaker();
-            if (maker != null)
-                return maker.getConstructor(declClass, desc, minfo);
-        }
-
-        throw new CompileError("the called constructor is private in "
-                               + declClass.getName());
-    }
+	protected String getAccessibleConstructor(String desc, CtClass declClass, MethodInfo minfo) throws CompileError {
+		if (isEnclosing(declClass, thisClass)) {
+			AccessorMaker maker = declClass.getAccessorMaker();
+			if (maker != null)
+				return maker.getConstructor(declClass, desc, minfo);
+		}
+		
+		throw new CompileError("the called constructor is private in " + declClass.getName());
+	}
 
     private boolean isEnclosing(CtClass outer, CtClass inner) {
         try {

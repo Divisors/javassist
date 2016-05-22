@@ -23,7 +23,8 @@ import javassist.compiler.CompileError;
  * overriding abstract methods in ASTree.
  */
 public class Pair extends ASTree {
-    protected ASTree left, right;
+	private static final long serialVersionUID = 4983294681996546807L;
+	protected ASTree left, right;
 
     public Pair(ASTree _left, ASTree _right) {
         left = _left;

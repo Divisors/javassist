@@ -16,9 +16,16 @@
 
 package javassist.bytecode.stackmap;
 
-import javassist.bytecode.*;
-import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import javassist.bytecode.BadBytecode;
+import javassist.bytecode.CodeAttribute;
+import javassist.bytecode.CodeIterator;
+import javassist.bytecode.ExceptionTable;
+import javassist.bytecode.MethodInfo;
+import javassist.bytecode.Opcode;
 
 /**
  * A basic block is a sequence of bytecode that does not contain jump/branch
@@ -28,7 +35,9 @@ import java.util.ArrayList;
  */
 public class BasicBlock {
     static class JsrBytecode extends BadBytecode {
-        JsrBytecode() { super("JSR"); }
+		private static final long serialVersionUID = 2938079177824880128L;
+
+		JsrBytecode() { super("JSR"); }
     }
 
     protected int position, length;
@@ -101,7 +110,7 @@ public class BasicBlock {
      * A Mark indicates the position of a branch instruction
      * or a branch target.
      */
-    static class Mark implements Comparable {
+    static class Mark implements Comparable<Mark> {
         int position;
         BasicBlock block;
         BasicBlock[] jump;
@@ -118,7 +127,7 @@ public class BasicBlock {
             catcher = null;
         }
 
-        public int compareTo(Object obj) {
+        public int compareTo(Mark obj) {
             if (obj instanceof Mark) {
                 int pos = ((Mark)obj).position;
                 return position - pos;
@@ -168,11 +177,8 @@ public class BasicBlock {
             return make(ci, 0, ci.getCodeLength(), ca.getExceptionTable());
         }
 
-        public BasicBlock[] make(CodeIterator ci, int begin, int end,
-                                 ExceptionTable et)
-            throws BadBytecode
-        {
-            HashMap marks = makeMarks(ci, begin, end, et);
+		public BasicBlock[] make(CodeIterator ci, int begin, int end, ExceptionTable et) throws BadBytecode {
+            HashMap<Integer, Mark> marks = makeMarks(ci, begin, end, et);
             BasicBlock[] bb = makeBlocks(marks);
             addCatchers(bb, et);
             return bb;
@@ -180,21 +186,21 @@ public class BasicBlock {
 
         /* Branch target
          */
-        private Mark makeMark(HashMap table, int pos) {
+        private Mark makeMark(HashMap<Integer, Mark> table, int pos) {
             return makeMark0(table, pos, true, true);
         }
 
         /* Branch instruction.
          * size > 0
          */
-        private Mark makeMark(HashMap table, int pos, BasicBlock[] jump,
+        private Mark makeMark(HashMap<Integer, Mark> table, int pos, BasicBlock[] jump,
                               int size, boolean always) {
             Mark m = makeMark0(table, pos, false, false);
             m.setJump(jump, size, always);
             return m;
         }
 
-        private Mark makeMark0(HashMap table, int pos,
+        private Mark makeMark0(HashMap<Integer, Mark> table, int pos,
                                boolean isBlockBegin, boolean isTarget) {
             Integer p = new Integer(pos);
             Mark m = (Mark)table.get(p);
@@ -214,13 +220,12 @@ public class BasicBlock {
             return m;
         }
 
-        private HashMap makeMarks(CodeIterator ci, int begin, int end,
-                                  ExceptionTable et)
-            throws BadBytecode
+		private HashMap<Integer, Mark> makeMarks(CodeIterator ci, int begin, int end, ExceptionTable et)
+				throws BadBytecode
         {
             ci.begin();
             ci.move(begin);
-            HashMap marks = new HashMap();
+            HashMap<Integer, Mark> marks = new HashMap<>();
             while (ci.hasNext()) {
                 int index = ci.next();
                 if (index >= end)
@@ -296,7 +301,7 @@ public class BasicBlock {
             return marks;
         }
 
-        private void makeGoto(HashMap marks, int pos, int target, int size) {
+        private void makeGoto(HashMap<Integer, Mark> marks, int pos, int target, int size) {
             Mark to = makeMark(marks, target);
             BasicBlock[] jumps = makeArray(to.block);
             makeMark(marks, pos, jumps, size, true);
@@ -306,7 +311,7 @@ public class BasicBlock {
          * We could ignore JSR since Java 7 or later does not allow it.
          * See The JVM Spec. Sec. 4.10.2.5.
          */
-        protected void makeJsr(HashMap marks, int pos, int target, int size) throws BadBytecode {
+        protected void makeJsr(HashMap<Integer, Mark> marks, int pos, int target, int size) throws BadBytecode {
             /*
             Mark to = makeMark(marks, target);
             Mark next = makeMark(marks, pos + size);
@@ -316,11 +321,11 @@ public class BasicBlock {
             throw new JsrBytecode();
         }
 
-        private BasicBlock[] makeBlocks(HashMap markTable) {
+        private BasicBlock[] makeBlocks(HashMap<Integer, Mark> markTable) {
             Mark[] marks = (Mark[])markTable.values()
                                             .toArray(new Mark[markTable.size()]);
             java.util.Arrays.sort(marks);
-            ArrayList blocks = new ArrayList();
+            List<BasicBlock> blocks = new ArrayList<>();
             int i = 0;
             BasicBlock prev;
             if (marks.length > 0 && marks[0].position == 0 && marks[0].block != null)

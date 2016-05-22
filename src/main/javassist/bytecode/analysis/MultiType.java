@@ -16,7 +16,6 @@
 package javassist.bytecode.analysis;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import javassist.CtClass;
@@ -47,17 +46,17 @@ import javassist.CtClass;
  * changes, and somehow communicating assignment changes to the Analyzer
  */
 public class MultiType extends Type {
-    private Map interfaces;
+    private Map<String, CtClass> interfaces;
     private Type resolved;
     private Type potentialClass;
     private MultiType mergeSource;
     private boolean changed = false;
 
-    public MultiType(Map interfaces) {
+    public MultiType(Map<String, CtClass> interfaces) {
         this(interfaces, null);
     }
 
-    public MultiType(Map interfaces, Type potentialClass) {
+    public MultiType(Map<String, CtClass> interfaces, Type potentialClass) {
         super(null);
         this.interfaces = interfaces;
         this.potentialClass = potentialClass;
@@ -118,7 +117,7 @@ public class MultiType extends Type {
         if (potentialClass != null && !type.isAssignableFrom(potentialClass))
             potentialClass = null;
 
-        Map map = mergeMultiAndSingle(this, type);
+        Map<String, CtClass> map = mergeMultiAndSingle(this, type);
 
         if (map.size() == 1 && potentialClass == null) {
             // Update previous merge paths to the same resolved type
@@ -172,12 +171,10 @@ public class MultiType extends Type {
        return true;
     }
 
-    private Map getAllMultiInterfaces(MultiType type) {
-        Map map = new HashMap();
+    private Map<String, CtClass> getAllMultiInterfaces(MultiType type) {
+        Map<String, CtClass> map = new HashMap<>();
 
-        Iterator iter = type.interfaces.values().iterator();
-        while (iter.hasNext()) {
-            CtClass intf = (CtClass)iter.next();
+        for (CtClass intf : type.interfaces.values()) {
             map.put(intf.getName(), intf);
             getAllInterfaces(intf, map);
         }
@@ -186,16 +183,16 @@ public class MultiType extends Type {
     }
 
 
-    private Map mergeMultiInterfaces(MultiType type1, MultiType type2) {
-        Map map1 = getAllMultiInterfaces(type1);
-        Map map2 = getAllMultiInterfaces(type2);
+    private Map<String, CtClass> mergeMultiInterfaces(MultiType type1, MultiType type2) {
+        Map<String, CtClass> map1 = getAllMultiInterfaces(type1);
+        Map<String, CtClass> map2 = getAllMultiInterfaces(type2);
 
         return findCommonInterfaces(map1, map2);
     }
 
-    private Map mergeMultiAndSingle(MultiType multi, Type single) {
-        Map map1 = getAllMultiInterfaces(multi);
-        Map map2 = getAllInterfaces(single.getCtClass(), null);
+    private Map<String, CtClass> mergeMultiAndSingle(MultiType multi, Type single) {
+        Map<String, CtClass> map1 = getAllMultiInterfaces(multi);
+        Map<String, CtClass> map2 = getAllInterfaces(single.getCtClass(), null);
 
         return findCommonInterfaces(map1, map2);
     }
@@ -235,7 +232,7 @@ public class MultiType extends Type {
             }
         }
 
-        Map merged;
+        Map<String, CtClass> merged;
 
         if (type instanceof MultiType) {
             MultiType multi = (MultiType)type;
@@ -257,10 +254,11 @@ public class MultiType extends Type {
             if (merged.size() != interfaces.size()) {
                 changed = true;
             } else if (changed == false){
-                Iterator iter = merged.keySet().iterator();
-                while (iter.hasNext())
-                    if (! interfaces.containsKey(iter.next()))
+                for (String ifaceName : merged.keySet())
+                    if (! interfaces.containsKey(ifaceName)) {
                         changed = true;
+                        break;
+                    }
             }
 
             interfaces = merged;
@@ -299,12 +297,10 @@ public class MultiType extends Type {
         if (resolved != null)
             return resolved.toString();
 
-        StringBuffer buffer = new StringBuffer("{");
-        Iterator iter = interfaces.keySet().iterator();
-        while (iter.hasNext()) {
-            buffer.append(iter.next());
-            buffer.append(", ");
-        }
+        StringBuilder buffer = new StringBuilder("{");
+        for (String ifaceName : interfaces.keySet())
+            buffer.append(ifaceName).append(", ");
+        
         buffer.setLength(buffer.length() - 2);
         if (potentialClass != null)
             buffer.append(", *").append(potentialClass.toString());

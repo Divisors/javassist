@@ -17,6 +17,7 @@
 package javassist.tools.web;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.net.*;
 
 /**
@@ -94,15 +95,12 @@ public class Viewer extends ClassLoader {
      * @param classname         executed class
      * @param args              the arguments passed to <code>main()</code>.
      */
-    public void run(String classname, String[] args)
-        throws Throwable
-    {
-        Class c = loadClass(classname);
+	public void run(String classname, String[] args) throws Throwable {
+        Class<?> c = loadClass(classname);
         try {
             c.getDeclaredMethod("main", new Class[] { String[].class })
                 .invoke(null, new Object[] { args });
-        }
-        catch (java.lang.reflect.InvocationTargetException e) {
+        } catch (InvocationTargetException e) {
             throw e.getTargetException();
         }
     }
@@ -110,10 +108,8 @@ public class Viewer extends ClassLoader {
     /**
      * Requests the class loader to load a class.
      */
-    protected synchronized Class loadClass(String name, boolean resolve)
-        throws ClassNotFoundException
-    {
-        Class c = findLoadedClass(name);
+	protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+        Class<?> c = findLoadedClass(name);
         if (c == null)
             c = findClass(name);
 
@@ -136,8 +132,8 @@ public class Viewer extends ClassLoader {
      * <p>This method can be overridden by a subclass of
      * <code>Viewer</code>.
      */
-    protected Class findClass(String name) throws ClassNotFoundException {
-        Class c = null;
+    protected Class<?> findClass(String name) throws ClassNotFoundException {
+        Class<?> c = null;
         if (name.startsWith("java.") || name.startsWith("javax.")
             || name.equals("javassist.tools.web.Viewer"))
             c = findSystemClass(name);
@@ -158,32 +154,30 @@ public class Viewer extends ClassLoader {
      * Fetches the class file of the specified class from the http
      * server.
      */
-    protected byte[] fetchClass(String classname) throws Exception
-    {
+    protected byte[] fetchClass(String classname) throws Exception {
         byte[] b;
-        URL url = new URL("http", server, port,
-                          "/" + classname.replace('.', '/') + ".class");
+        URL url = new URL("http", server, port, "/" + classname.replace('.', '/') + ".class");
         URLConnection con = url.openConnection();
         con.connect();
         int size = con.getContentLength();
-        InputStream s = con.getInputStream();
-        if (size <= 0)
-            b = readStream(s);
-        else {
-            b = new byte[size];
-            int len = 0;
-            do {
-                int n = s.read(b, len, size - len);
-                if (n < 0) {
-                    s.close();
-                    throw new IOException("the stream was closed: "
-                                          + classname);
-                }
-                len += n;
-            } while (len < size);
+        
+        try (InputStream s = con.getInputStream()) {
+	        if (size <= 0)
+	            b = readStream(s);
+	        else {
+	            b = new byte[size];
+	            int len = 0;
+	            do {
+	                int n = s.read(b, len, size - len);
+	                if (n < 0) {
+	                    s.close();
+	                    throw new IOException("the stream was closed: "
+	                                          + classname);
+	                }
+	                len += n;
+	            } while (len < size);
+	        }
         }
-
-        s.close();
         return b;
     }
 

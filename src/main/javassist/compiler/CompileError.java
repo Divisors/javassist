@@ -20,7 +20,8 @@ import javassist.CannotCompileException;
 import javassist.NotFoundException;
 
 public class CompileError extends Exception {
-    private Lex lex;
+	private static final long serialVersionUID = -3911194191837587598L;
+	private Lex lex;
     private String reason;
 
     public CompileError(String s, Lex l) {

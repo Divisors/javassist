@@ -63,7 +63,7 @@ public class ShortMemberValue extends MemberValue {
         return new Short(getValue());
     }
 
-    Class getType(ClassLoader cl) {
+    Class<?> getType(ClassLoader cl) {
         return short.class;
     }
 

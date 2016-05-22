@@ -29,7 +29,8 @@ public class LocalVariableTypeAttribute extends LocalVariableAttribute {
     /**
      * The name of the attribute <code>"LocalVariableTypeTable"</code>.
      */
-    public static final String tag = LocalVariableAttribute.typeTag;
+    @SuppressWarnings("hiding")
+	public static final String tag = LocalVariableAttribute.typeTag;
 
     /**
      * Constructs an empty LocalVariableTypeTable.
@@ -53,7 +54,7 @@ public class LocalVariableTypeAttribute extends LocalVariableAttribute {
         return SignatureAttribute.renameClass(desc, oldname, newname);
     }
 
-    String renameEntry(String desc, Map classnames) {
+    String renameEntry(String desc, Map<String, String> classnames) {
         return SignatureAttribute.renameClass(desc, classnames);
     }
 

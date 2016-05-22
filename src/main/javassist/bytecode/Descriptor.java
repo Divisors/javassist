@@ -200,11 +200,12 @@ public class Descriptor {
      *            JVM class names.
      * @see Descriptor#toJvmName(String)
      */
-    public static String rename(String desc, Map map) {
+    public static String rename(String desc, Map<String, String> map) {
         if (map == null)
             return desc;
 
         StringBuffer newdesc = new StringBuffer();
+        //TODO replace with String.split() or something
         int head = 0;
         int i = 0;
         for (;;) {
@@ -218,7 +219,7 @@ public class Descriptor {
 
             i = k + 1;
             String name = desc.substring(j + 1, k);
-            String name2 = (String)map.get(name);
+            String name2 = map.get(name);
             if (name2 != null) {
                 newdesc.append(desc.substring(head, j));
                 newdesc.append('L');

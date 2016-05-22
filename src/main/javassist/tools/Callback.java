@@ -48,7 +48,7 @@ import java.util.UUID;
  */
 public abstract class Callback {
 
-    public static HashMap<String, Callback> callbacks = new HashMap<String, Callback>();
+    public static HashMap<String, Callback> callbacks = new HashMap<>();
 
     private final String sourceCode;
 

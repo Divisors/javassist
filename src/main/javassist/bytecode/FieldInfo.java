@@ -43,7 +43,7 @@ public final class FieldInfo {
     String cachedName;
     String cachedType;
     int descriptor;
-    ArrayList attribute;       // may be null.
+    ArrayList<AttributeInfo> attribute;       // may be null.
 
     private FieldInfo(ConstPool cp) {
         constPool = cp;
@@ -95,23 +95,20 @@ public final class FieldInfo {
     }
 
     void prune(ConstPool cp) {
-        ArrayList newAttributes = new ArrayList();
-        AttributeInfo invisibleAnnotations
-            = getAttribute(AnnotationsAttribute.invisibleTag);
+        ArrayList<AttributeInfo> newAttributes = new ArrayList<>();
+        AttributeInfo invisibleAnnotations = getAttribute(AnnotationsAttribute.invisibleTag);
         if (invisibleAnnotations != null) {
             invisibleAnnotations = invisibleAnnotations.copy(cp, null);
             newAttributes.add(invisibleAnnotations);
          }
 
-        AttributeInfo visibleAnnotations
-            = getAttribute(AnnotationsAttribute.visibleTag);
+        AttributeInfo visibleAnnotations = getAttribute(AnnotationsAttribute.visibleTag);
         if (visibleAnnotations != null) {
             visibleAnnotations = visibleAnnotations.copy(cp, null);
             newAttributes.add(visibleAnnotations);
         }
 
-        AttributeInfo signature 
-            = getAttribute(SignatureAttribute.tag);
+        AttributeInfo signature = getAttribute(SignatureAttribute.tag);
         if (signature != null) {
             signature = signature.copy(cp, null);
             newAttributes.add(signature);
@@ -220,9 +217,9 @@ public final class FieldInfo {
      * @return a list of <code>AttributeInfo</code> objects.
      * @see AttributeInfo
      */
-    public List getAttributes() {
+    public List<AttributeInfo> getAttributes() {
         if (attribute == null)
-            attribute = new ArrayList();
+            attribute = new ArrayList<>();
 
         return attribute;
     }
@@ -246,7 +243,7 @@ public final class FieldInfo {
      */
     public void addAttribute(AttributeInfo info) {
         if (attribute == null)
-            attribute = new ArrayList();
+            attribute = new ArrayList<>();
 
         AttributeInfo.remove(attribute, info.getName());
         attribute.add(info);
@@ -257,7 +254,7 @@ public final class FieldInfo {
         name = in.readUnsignedShort();
         descriptor = in.readUnsignedShort();
         int n = in.readUnsignedShort();
-        attribute = new ArrayList();
+        attribute = new ArrayList<>();
         for (int i = 0; i < n; ++i)
             attribute.add(AttributeInfo.read(constPool, in));
     }

@@ -385,7 +385,7 @@ public class BytecodeTest extends TestCase {
             = new AnnotationsAttribute(cf.getConstPool(),
                                        AnnotationsAttribute.invisibleTag);
         ConstPool cp = cf.getConstPool();
-        Annotation a = new Annotation("Anno", cp);
+        CtAnnotation a = new CtAnnotation("Anno", cp);
         StringMemberValue smv = new StringMemberValue("foo", cp);
         a.addMemberValue("name", smv);
         anno.setAnnotation(a);
@@ -827,9 +827,9 @@ public class BytecodeTest extends TestCase {
     }
 
     public static void main(String[] args) {
-        // junit.textui.TestRunner.run(suite());
-        junit.awtui.TestRunner.main(new String[] {
-            "javassist.bytecode.BytecodeTest" });
+         junit.textui.TestRunner.run(suite());
+//        junit.awtui.TestRunner.main(new String[] {
+//            "javassist.bytecode.BytecodeTest" });
     }
 
     public static Test suite() {

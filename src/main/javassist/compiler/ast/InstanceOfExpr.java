@@ -22,7 +22,9 @@ import javassist.compiler.CompileError;
  * Instanceof expression.
  */
 public class InstanceOfExpr extends CastExpr {
-    public InstanceOfExpr(ASTList className, int dim, ASTree expr) {
+	private static final long serialVersionUID = 6006756606362151540L;
+
+	public InstanceOfExpr(ASTList className, int dim, ASTree expr) {
         super(className, dim, expr);
     }
 

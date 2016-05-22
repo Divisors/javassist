@@ -19,7 +19,8 @@ package javassist.compiler.ast;
 import javassist.compiler.CompileError;
 
 public class MethodDecl extends ASTList {
-    public static final String initName = "<init>";
+	private static final long serialVersionUID = 6143642298594142396L;
+	public static final String initName = "<init>";
 
     public MethodDecl(ASTree _head, ASTList _tail) {
         super(_head, _tail);

@@ -41,7 +41,7 @@ class ExceptionTableEntry {
  */
 public class ExceptionTable implements Cloneable {
     private ConstPool constPool;
-    private ArrayList entries;
+    private ArrayList<ExceptionTableEntry> entries;
 
     /**
      * Constructs an <code>exception_table[]</code>.
@@ -50,13 +50,13 @@ public class ExceptionTable implements Cloneable {
      */
     public ExceptionTable(ConstPool cp) {
         constPool = cp;
-        entries = new ArrayList();
+        entries = new ArrayList<>();
     }
 
     ExceptionTable(ConstPool cp, DataInputStream in) throws IOException {
         constPool = cp;
         int length = in.readUnsignedShort();
-        ArrayList list = new ArrayList(length);
+        ArrayList<ExceptionTableEntry> list = new ArrayList<>(length);
         for (int i = 0; i < length; ++i) {
             int start = in.readUnsignedShort();
             int end = in.readUnsignedShort();
@@ -75,7 +75,7 @@ public class ExceptionTable implements Cloneable {
      */
     public Object clone() throws CloneNotSupportedException {
         ExceptionTable r = (ExceptionTable)super.clone();
-        r.entries = new ArrayList(entries);
+        r.entries = new ArrayList<>(entries);
         return r;
     }
 
@@ -236,7 +236,7 @@ public class ExceptionTable implements Cloneable {
      * @param classnames        pairs of replaced and substituted
      *                          class names.
      */
-    public ExceptionTable copy(ConstPool newCp, Map classnames) {
+    public ExceptionTable copy(ConstPool newCp, Map<String, String> classnames) {
         ExceptionTable et = new ExceptionTable(newCp);
         ConstPool srcCp = constPool;
         int len = size();

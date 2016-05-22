@@ -22,7 +22,8 @@ import javassist.compiler.CompileError;
  * Thrown when bytecode transformation has failed.
  */
 public class CannotCompileException extends Exception {
-    private Throwable myCause;
+	private static final long serialVersionUID = -5460765091995687379L;
+	private Throwable myCause;
 
     /**
      * Gets the cause of this throwable.

@@ -79,7 +79,7 @@ public class ParameterAnnotationsAttribute extends AttributeInfo {
      * @param cp            constant pool
      * @param attrname      attribute name (<code>visibleTag</code> or
      *                      <code>invisibleTag</code>).
-     * @see #setAnnotations(Annotation[][])
+     * @see #setAnnotations(CtAnnotation[][])
      */
     public ParameterAnnotationsAttribute(ConstPool cp, String attrname) {
         this(cp, attrname, new byte[] { 0 });
@@ -101,20 +101,18 @@ public class ParameterAnnotationsAttribute extends AttributeInfo {
         return info[0] & 0xff;
     }
 
-    /**
-     * Copies this attribute and returns a new copy.
-     */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
-        Copier copier = new Copier(info, constPool, newCp, classnames);
-        try {
-            copier.parameters();
-            return new ParameterAnnotationsAttribute(newCp, getName(),
-                                                     copier.close());
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e.toString());
-        }
-    }
+	/**
+	 * Copies this attribute and returns a new copy.
+	 */
+	public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
+		Copier copier = new Copier(info, constPool, newCp, classnames);
+		try {
+			copier.parameters();
+			return new ParameterAnnotationsAttribute(newCp, getName(), copier.close());
+		} catch (Exception e) {
+			throw new RuntimeException(e.toString());
+		}
+	}
 
     /**
      * Parses the annotations and returns a data structure representing
@@ -126,9 +124,9 @@ public class ParameterAnnotationsAttribute extends AttributeInfo {
      * @return Each element of the returned array represents an array of
      * annotations that are associated with each method parameter.
      *      
-     * @see #setAnnotations(Annotation[][])
+     * @see #setAnnotations(CtAnnotation[][])
      */
-    public Annotation[][] getAnnotations() {
+    public CtAnnotation[][] getAnnotations() {
         try {
             return new Parser(info, constPool).parseParameters();
         }
@@ -146,14 +144,14 @@ public class ParameterAnnotationsAttribute extends AttributeInfo {
      *                      is an array of <code>Annotation</code> and
      *                      it represens annotations of each method parameter.
      */
-    public void setAnnotations(Annotation[][] params) {
+    public void setAnnotations(CtAnnotation[][] params) {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         AnnotationsWriter writer = new AnnotationsWriter(output, constPool);
         try {
             int n = params.length;
             writer.numParameters(n);
             for (int i = 0; i < n; ++i) {
-                Annotation[] anno = params[i];
+                CtAnnotation[] anno = params[i];
                 writer.numAnnotations(anno.length);
                 for (int j = 0; j < anno.length; ++j)
                     anno[j].write(writer);
@@ -173,12 +171,12 @@ public class ParameterAnnotationsAttribute extends AttributeInfo {
      * @param newname       a JVM class name.
      */
     void renameClass(String oldname, String newname) {
-        HashMap map = new HashMap();
+        HashMap<String, String> map = new HashMap<>();
         map.put(oldname, newname);
         renameClass(map);
     }
 
-    void renameClass(Map classnames) {
+    void renameClass(Map<String, String> classnames) {
         Renamer renamer = new Renamer(info, getConstPool(), classnames);
         try {
             renamer.parameters();
@@ -187,17 +185,17 @@ public class ParameterAnnotationsAttribute extends AttributeInfo {
         }
     }
 
-    void getRefClasses(Map classnames) { renameClass(classnames); }
+    void getRefClasses(Map<String, String> classnames) { renameClass(classnames); }
 
     /**
      * Returns a string representation of this object.
      */
     public String toString() {
-        Annotation[][] aa = getAnnotations();
+        CtAnnotation[][] aa = getAnnotations();
         StringBuilder sbuf = new StringBuilder();
         int k = 0;
         while (k < aa.length) {
-            Annotation[] a = aa[k++]; 
+            CtAnnotation[] a = aa[k++]; 
             int i = 0;
             while (i < a.length) {
                 sbuf.append(a[i++].toString());

@@ -19,11 +19,10 @@ package javassist.bytecode;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Map;
 import java.util.ArrayList;
-import java.util.ListIterator;
 import java.util.List;
-import java.util.Iterator;
+import java.util.ListIterator;
+import java.util.Map;
 
 // Note: if you define a new subclass of AttributeInfo, then
 //       update AttributeInfo.read(), .copy(), and (maybe) write().
@@ -189,7 +188,7 @@ public class AttributeInfo {
      * @param classnames        pairs of replaced and substituted
      *                          class names.
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
+    public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
         int s = info.length;
         byte[] srcInfo = info;
         byte[] newInfo = new byte[s];
@@ -206,7 +205,7 @@ public class AttributeInfo {
             out.write(info);
     }
 
-    static int getLength(ArrayList list) {
+    static int getLength(ArrayList<AttributeInfo> list) {
         int size = 0;
         int n = list.size();
         for (int i = 0; i < n; ++i) {
@@ -217,11 +216,11 @@ public class AttributeInfo {
         return size;
     }
 
-    static AttributeInfo lookup(ArrayList list, String name) {
+    static AttributeInfo lookup(ArrayList<AttributeInfo> list, String name) {
         if (list == null)
             return null;
 
-        ListIterator iterator = list.listIterator();
+        ListIterator<AttributeInfo> iterator = list.listIterator();
         while (iterator.hasNext()) {
             AttributeInfo ai = (AttributeInfo)iterator.next();
             if (ai.getName().equals(name))
@@ -231,11 +230,11 @@ public class AttributeInfo {
         return null;            // no such attribute
     }
 
-    static synchronized void remove(ArrayList list, String name) {
+    static synchronized void remove(ArrayList<AttributeInfo> list, String name) {
         if (list == null)
             return;
 
-        ListIterator iterator = list.listIterator();
+        ListIterator<AttributeInfo> iterator = list.listIterator();
         while (iterator.hasNext()) {
             AttributeInfo ai = (AttributeInfo)iterator.next();
             if (ai.getName().equals(name))
@@ -243,9 +242,7 @@ public class AttributeInfo {
         }
     }
 
-    static void writeAll(ArrayList list, DataOutputStream out)
-        throws IOException
-    {
+	static void writeAll(ArrayList<AttributeInfo> list, DataOutputStream out) throws IOException {
         if (list == null)
             return;
 
@@ -256,16 +253,13 @@ public class AttributeInfo {
         }
     }
 
-    static ArrayList copyAll(ArrayList list, ConstPool cp) {
+    static ArrayList<AttributeInfo> copyAll(ArrayList<AttributeInfo> list, ConstPool cp) {
         if (list == null)
             return null;
 
-        ArrayList newList = new ArrayList();
-        int n = list.size();
-        for (int i = 0; i < n; ++i) {
-            AttributeInfo attr = (AttributeInfo)list.get(i);
+        ArrayList<AttributeInfo> newList = new ArrayList<>();
+        for (AttributeInfo attr : list)
             newList.add(attr.copy(cp, null));
-        }
 
         return newList;
     }
@@ -277,31 +271,22 @@ public class AttributeInfo {
      * override these methods.
      */
     void renameClass(String oldname, String newname) {}
-    void renameClass(Map classnames) {}
+    void renameClass(Map<String, String> classnames) {}
 
-    static void renameClass(List attributes, String oldname, String newname) {
-        Iterator iterator = attributes.iterator();
-        while (iterator.hasNext()) {
-            AttributeInfo ai = (AttributeInfo)iterator.next();
+    static void renameClass(List<AttributeInfo> attributes, String oldname, String newname) {
+        for(AttributeInfo ai : attributes)
             ai.renameClass(oldname, newname);
-        }
     }
 
-    static void renameClass(List attributes, Map classnames) {
-        Iterator iterator = attributes.iterator();
-        while (iterator.hasNext()) {
-            AttributeInfo ai = (AttributeInfo)iterator.next();
+    static void renameClass(List<AttributeInfo> attributes, Map<String, String> classnames) {
+        for (AttributeInfo ai : attributes)
             ai.renameClass(classnames);
-        }
     }
 
-    void getRefClasses(Map classnames) {}
+    void getRefClasses(Map<String, String> classnames) {}
 
-    static void getRefClasses(List attributes, Map classnames) {
-        Iterator iterator = attributes.iterator();
-        while (iterator.hasNext()) {
-            AttributeInfo ai = (AttributeInfo)iterator.next();
-            ai.getRefClasses(classnames);
-        }
-    }
+	static void getRefClasses(List<AttributeInfo> attributes, Map<String, String> classnames) {
+		for (AttributeInfo ai : attributes)
+			ai.getRefClasses(classnames);
+	}
 }

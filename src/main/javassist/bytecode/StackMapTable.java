@@ -62,163 +62,162 @@ public class StackMapTable extends AttributeInfo {
      *                          <code>RuntimeCopyException</code>.
      *
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames)
-        throws RuntimeCopyException
-    {
-        try {
-            return new StackMapTable(newCp,
-                            new Copier(this.constPool, info, newCp, classnames).doit());
-        }
-        catch (BadBytecode e) {
-            throw new RuntimeCopyException("bad bytecode. fatal?"); 
-        }
-    }
+	public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) throws RuntimeCopyException {
+		try {
+			return new StackMapTable(newCp, new Copier(this.constPool, info, newCp, classnames).doit());
+		} catch (BadBytecode e) {
+			throw new RuntimeCopyException("bad bytecode. fatal?");
+		}
+	}
+	
+	/**
+	 * An exception that may be thrown by <code>copy()</code> in
+	 * <code>StackMapTable</code>.
+	 */
+	public static class RuntimeCopyException extends RuntimeException {
+		private static final long serialVersionUID = -3128794962243397279L;
+		
+		/**
+		 * Constructs an exception.
+		 */
+		public RuntimeCopyException(String s) {
+			super(s);
+		}
+	}
+	
+	void write(DataOutputStream out) throws IOException {
+		super.write(out);
+	}
+	
+	/**
+	 * <code>Top_variable_info.tag</code>.
+	 */
+	public static final int TOP = 0;
+	
+	/**
+	 * <code>Integer_variable_info.tag</code>.
+	 */
+	public static final int INTEGER = 1;
+	
+	/**
+	 * <code>Float_variable_info.tag</code>.
+	 */
+	public static final int FLOAT = 2;
+	
+	/**
+	 * <code>Double_variable_info.tag</code>.
+	 */
+	public static final int DOUBLE = 3;
 
-    /**
-     * An exception that may be thrown by <code>copy()</code>
-     * in <code>StackMapTable</code>.
-     */
-    public static class RuntimeCopyException extends RuntimeException {
-        /**
-         * Constructs an exception.
-         */
-        public RuntimeCopyException(String s) {
-            super(s);
-        }
-    }
-
-    void write(DataOutputStream out) throws IOException {
-        super.write(out);
-    }
-
-    /**
-     * <code>Top_variable_info.tag</code>.
-     */
-    public static final int TOP = 0;
-
-    /**
-     * <code>Integer_variable_info.tag</code>.
-     */
-    public static final int INTEGER = 1;
-
-    /**
-     * <code>Float_variable_info.tag</code>.
-     */
-    public static final int FLOAT = 2;
-
-    /**
-     * <code>Double_variable_info.tag</code>.
-     */
-    public static final int DOUBLE = 3;
-
-    /**
-     * <code>Long_variable_info.tag</code>.
-     */
-    public static final int LONG = 4;
-
-    /**
-     * <code>Null_variable_info.tag</code>.
-     */
-    public static final int NULL = 5;
-
-    /**
-     * <code>UninitializedThis_variable_info.tag</code>.
-     */
-    public static final int THIS = 6;
-
-    /**
-     * <code>Object_variable_info.tag</code>.
-     */
-    public static final int OBJECT = 7;
-
-    /**
-     * <code>Uninitialized_variable_info.tag</code>.
-     */
-    public static final int UNINIT = 8;
-
-    /**
-     * A code walker for a StackMapTable attribute.
-     */
-    public static class Walker {
-        byte[] info;
-        int numOfEntries;
-
-        /**
-         * Constructs a walker.
-         *
-         * @param smt       the StackMapTable that this walker
-         *                  walks around.
-         */
-        public Walker(StackMapTable smt) {
-            this(smt.get());
-        }
-
-        /**
-         * Constructs a walker.
-         *
-         * @param data      the <code>info</code> field of the
-         *                  <code>attribute_info</code> structure.
-         *                  It can be obtained by <code>get()</code>
-         *                  in the <code>AttributeInfo</code> class.
-         */
-        public Walker(byte[] data) {
-            info = data;
-            numOfEntries = ByteArray.readU16bit(data, 0);
-        }
-
-        /**
-         * Returns the number of the entries.
-         */
-        public final int size() { return numOfEntries; }
-
-        /**
-         * Visits each entry of the stack map frames. 
-         */
-        public void parse() throws BadBytecode {
-            int n = numOfEntries;
-            int pos = 2;
-            for (int i = 0; i < n; i++)
-                pos = stackMapFrames(pos, i);
-        }
-
-        /**
-         * Invoked when the next entry of the stack map frames is visited.
-         *
-         * @param pos       the position of the frame in the <code>info</code>
-         *                  field of <code>attribute_info</code> structure.
-         * @param nth       the frame is the N-th
-         *                  (0, 1st, 2nd, 3rd, 4th, ...) entry. 
-         * @return          the position of the next frame.
-         */
-        int stackMapFrames(int pos, int nth) throws BadBytecode {
-            int type = info[pos] & 0xff;
-            if (type < 64) {
-                sameFrame(pos, type);
-                pos++;
-            }
-            else if (type < 128)
-                pos = sameLocals(pos, type);
-            else if (type < 247)
-                throw new BadBytecode("bad frame_type in StackMapTable");
-            else if (type == 247)   // SAME_LOCALS_1_STACK_ITEM_EXTENDED
-                pos = sameLocals(pos, type);
-            else if (type < 251) {
-                int offset = ByteArray.readU16bit(info, pos + 1);
-                chopFrame(pos, offset, 251 - type);
-                pos += 3;
-            }
-            else if (type == 251) { // SAME_FRAME_EXTENDED
-                int offset = ByteArray.readU16bit(info, pos + 1);
-                sameFrame(pos, offset);
-                pos += 3;
-            }
-            else if (type < 255)
-                pos = appendFrame(pos, type);
-            else    // FULL_FRAME
-                pos = fullFrame(pos);
-
-            return pos;
-        }
+	/**
+	 * <code>Long_variable_info.tag</code>.
+	 */
+	public static final int LONG = 4;
+	
+	/**
+	 * <code>Null_variable_info.tag</code>.
+	 */
+	public static final int NULL = 5;
+	
+	/**
+	 * <code>UninitializedThis_variable_info.tag</code>.
+	 */
+	public static final int THIS = 6;
+	
+	/**
+	 * <code>Object_variable_info.tag</code>.
+	 */
+	public static final int OBJECT = 7;
+	
+	/**
+	 * <code>Uninitialized_variable_info.tag</code>.
+	 */
+	public static final int UNINIT = 8;
+	
+	/**
+	 * A code walker for a StackMapTable attribute.
+	 */
+	public static class Walker {
+		byte[] info;
+		int numOfEntries;
+		
+		/**
+		 * Constructs a walker.
+		 *
+		 * @param smt
+		 *            the StackMapTable that this walker walks around.
+		 */
+		public Walker(StackMapTable smt) {
+			this(smt.get());
+		}
+		
+		/**
+		 * Constructs a walker.
+		 *
+		 * @param data
+		 *            the <code>info</code> field of the
+		 *            <code>attribute_info</code> structure. It can be obtained
+		 *            by <code>get()</code> in the <code>AttributeInfo</code>
+		 *            class.
+		 */
+		public Walker(byte[] data) {
+			info = data;
+			numOfEntries = ByteArray.readU16bit(data, 0);
+		}
+		
+		/**
+		 * Returns the number of the entries.
+		 */
+		public final int size() {
+			return numOfEntries;
+		}
+		
+		/**
+		 * Visits each entry of the stack map frames.
+		 */
+		public void parse() throws BadBytecode {
+			int n = numOfEntries;
+			int pos = 2;
+			for (int i = 0; i < n; i++)
+				pos = stackMapFrames(pos, i);
+		}
+		
+		/**
+		 * Invoked when the next entry of the stack map frames is visited.
+		 *
+		 * @param pos
+		 *            the position of the frame in the <code>info</code> field
+		 *            of <code>attribute_info</code> structure.
+		 * @param nth
+		 *            the frame is the N-th (0, 1st, 2nd, 3rd, 4th, ...) entry.
+		 * @return the position of the next frame.
+		 */
+		int stackMapFrames(int pos, int nth) throws BadBytecode {
+			int type = info[pos] & 0xff;
+			if (type < 64) {
+				sameFrame(pos, type);
+				pos++;
+			} else if (type < 128)
+				pos = sameLocals(pos, type);
+			else if (type < 247)
+				throw new BadBytecode("bad frame_type in StackMapTable");
+			else if (type == 247) // SAME_LOCALS_1_STACK_ITEM_EXTENDED
+				pos = sameLocals(pos, type);
+			else if (type < 251) {
+				int offset = ByteArray.readU16bit(info, pos + 1);
+				chopFrame(pos, offset, 251 - type);
+				pos += 3;
+			} else if (type == 251) { // SAME_FRAME_EXTENDED
+				int offset = ByteArray.readU16bit(info, pos + 1);
+				sameFrame(pos, offset);
+				pos += 3;
+			} else if (type < 255)
+				pos = appendFrame(pos, type);
+			else // FULL_FRAME
+				pos = fullFrame(pos);
+			
+			return pos;
+		}
 
         /**
          * Invoked if the visited frame is a <code>same_frame</code> or
@@ -413,9 +412,9 @@ public class StackMapTable extends AttributeInfo {
 
     static class Copier extends SimpleCopy {
         private ConstPool srcPool, destPool;
-        private Map classnames;
+        private Map<String, String> classnames;
 
-        public Copier(ConstPool src, byte[] data, ConstPool dest, Map names) {
+        public Copier(ConstPool src, byte[] data, ConstPool dest, Map<String, String> names) {
             super(data);
             srcPool = src;
             destPool = dest;

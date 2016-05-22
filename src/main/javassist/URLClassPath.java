@@ -102,13 +102,11 @@ public class URLClassPath implements ClassPath {
     public URL find(String classname) {
         try {
             URLConnection con = openClassfile0(classname);
-            InputStream is = con.getInputStream();
-            if (is != null) {
-                is.close();
+            try (InputStream is = con.getInputStream()) {
+            if (is != null)
                 return con.getURL();
             }
-        }
-        catch (IOException e) {}
+        } catch (IOException e) {}
         return null; 
     }
 
@@ -127,34 +125,27 @@ public class URLClassPath implements ClassPath {
      *                          It must start with "/".
      * @param classname         fully-qualified class name
      */
-    public static byte[] fetchClass(String host, int port,
-                                    String directory, String classname)
-        throws IOException
-    {
+	public static byte[] fetchClass(String host, int port, String directory, String classname) throws IOException {
         byte[] b;
         URLConnection con = fetchClass0(host, port,
                 directory + classname.replace('.', '/') + ".class");
         int size = con.getContentLength();
-        InputStream s = con.getInputStream();
-        try {
-            if (size <= 0)
-                b = ClassPoolTail.readStream(s);
-            else {
-                b = new byte[size];
-                int len = 0;
-                do {
-                    int n = s.read(b, len, size - len);
-                    if (n < 0)
-                        throw new IOException("the stream was closed: "
-                                              + classname);
-
-                    len += n;
-                } while (len < size);
-            }
-        }
-        finally {
-            s.close();
-        }
+        
+		try (InputStream s = con.getInputStream()) {
+			if (size <= 0)
+				b = ClassPoolTail.readStream(s);
+			else {
+				b = new byte[size];
+				int len = 0;
+				do {
+					int n = s.read(b, len, size - len);
+					if (n < 0)
+						throw new IOException("the stream was closed: " + classname);
+					
+					len += n;
+				} while (len < size);
+			}
+		}
 
         return b;
     }

@@ -18,8 +18,34 @@ package javassist.compiler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import javassist.compiler.ast.*;
-import javassist.bytecode.*;
+import java.util.List;
+
+import javassist.bytecode.Bytecode;
+import javassist.bytecode.Opcode;
+import javassist.compiler.ast.ASTList;
+import javassist.compiler.ast.ASTree;
+import javassist.compiler.ast.ArrayInit;
+import javassist.compiler.ast.AssignExpr;
+import javassist.compiler.ast.BinExpr;
+import javassist.compiler.ast.CallExpr;
+import javassist.compiler.ast.CastExpr;
+import javassist.compiler.ast.CondExpr;
+import javassist.compiler.ast.Declarator;
+import javassist.compiler.ast.DoubleConst;
+import javassist.compiler.ast.Expr;
+import javassist.compiler.ast.FieldDecl;
+import javassist.compiler.ast.InstanceOfExpr;
+import javassist.compiler.ast.IntConst;
+import javassist.compiler.ast.Keyword;
+import javassist.compiler.ast.Member;
+import javassist.compiler.ast.MethodDecl;
+import javassist.compiler.ast.NewExpr;
+import javassist.compiler.ast.Pair;
+import javassist.compiler.ast.Stmnt;
+import javassist.compiler.ast.StringL;
+import javassist.compiler.ast.Symbol;
+import javassist.compiler.ast.Variable;
+import javassist.compiler.ast.Visitor;
 
 /* The code generator is implemeted by three files:
  * CodeGen.java, MemberCodeGen.java, and JvstCodeGen.
@@ -47,7 +73,7 @@ public abstract class CodeGen extends Visitor implements Opcode, TokenId {
      */
     public boolean inStaticMethod;
 
-    protected ArrayList breakList, continueList;
+    protected List<Integer> breakList, continueList;
 
     /**
      * doit() in ReturnHook is called from atReturn().
@@ -417,10 +443,10 @@ public abstract class CodeGen extends Visitor implements Opcode, TokenId {
     }
 
     private void atWhileStmnt(Stmnt st, boolean notDo) throws CompileError {
-        ArrayList prevBreakList = breakList;
-        ArrayList prevContList = continueList;
-        breakList = new ArrayList();
-        continueList = new ArrayList();
+        List<Integer> prevBreakList = breakList;
+        List<Integer> prevContList = continueList;
+        breakList = new ArrayList<>();
+        continueList = new ArrayList<>();
 
         ASTree expr = st.head();
         Stmnt body = (Stmnt)st.tail();
@@ -454,19 +480,16 @@ public abstract class CodeGen extends Visitor implements Opcode, TokenId {
         hasReturned = alwaysBranch;
     }
 
-    protected void patchGoto(ArrayList list, int targetPc) {
-        int n = list.size();
-        for (int i = 0; i < n; ++i) {
-            int pc = ((Integer)list.get(i)).intValue();
-            bytecode.write16bit(pc, targetPc - pc + 1);
-        }
+    protected void patchGoto(List<Integer> list, int targetPc) {
+        for (Integer pc : list)
+        	bytecode.write16bit(pc, targetPc - pc + 1);
     }
 
     private void atForStmnt(Stmnt st) throws CompileError {
-        ArrayList prevBreakList = breakList;
-        ArrayList prevContList = continueList;
-        breakList = new ArrayList();
-        continueList = new ArrayList();
+        List<Integer> prevBreakList = breakList;
+        List<Integer> prevContList = continueList;
+        breakList = new ArrayList<>();
+        continueList = new ArrayList<>();
 
         Stmnt init = (Stmnt)st.head();
         ASTList p = st.tail();
@@ -517,8 +540,8 @@ public abstract class CodeGen extends Visitor implements Opcode, TokenId {
     private void atSwitchStmnt(Stmnt st) throws CompileError {
         compileExpr(st.head());
 
-        ArrayList prevBreakList = breakList;
-        breakList = new ArrayList();
+        List<Integer> prevBreakList = breakList;
+        breakList = new ArrayList<>();
         int opcodePc = bytecode.currentPc();
         bytecode.addOpcode(LOOKUPSWITCH);
         int npads = 3 - (opcodePc & 3);
@@ -559,9 +582,9 @@ public abstract class CodeGen extends Visitor implements Opcode, TokenId {
 
         Arrays.sort(pairs);
         int pc = opcodePc2 + 8;
-        for (int i = 0; i < npairs; ++i) {
-            bytecode.write32bit(pc, (int)(pairs[i] >>> 32));
-            bytecode.write32bit(pc + 4, (int)pairs[i]);
+        for (Long pair : pairs) {
+            bytecode.write32bit(pc, (int)(pair >>> 32));
+            bytecode.write32bit(pc + 4, pair.intValue());
             pc += 8;
         } 
 
@@ -587,12 +610,9 @@ public abstract class CodeGen extends Visitor implements Opcode, TokenId {
             throw new CompileError("bad case label");
     }
 
-    private void atBreakStmnt(Stmnt st, boolean notCont)
-        throws CompileError
-    {
+	private void atBreakStmnt(Stmnt st, boolean notCont) throws CompileError {
         if (st.head() != null)
-            throw new CompileError(
-                        "sorry, not support labeled break or continue");
+			throw new CompileError("sorry, not support labeled break or continue");
 
         bytecode.addOpcode(Opcode.GOTO);
         Integer pc = new Integer(bytecode.currentPc());
@@ -711,7 +731,7 @@ public abstract class CodeGen extends Visitor implements Opcode, TokenId {
                 "sorry, cannot break/continue in synchronized block");
     }
 
-    private static int getListSize(ArrayList list) {
+    private static int getListSize(List<Integer> list) {
         return list == null ? 0 : list.size();
     }
 

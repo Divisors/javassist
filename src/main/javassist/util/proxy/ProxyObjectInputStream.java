@@ -67,9 +67,9 @@ public class ProxyObjectInputStream extends ObjectInputStream
         boolean isProxy = readBoolean();
         if (isProxy) {
             String name = (String)readObject();
-            Class superClass = loader.loadClass(name);
+            Class<?> superClass = loader.loadClass(name);
             int length = readInt();
-            Class[] interfaces = new Class[length];
+            Class<?>[] interfaces = new Class[length];
             for (int i = 0; i < length; i++) {
                 name = (String)readObject();
                 interfaces[i] = loader.loadClass(name);
@@ -77,14 +77,14 @@ public class ProxyObjectInputStream extends ObjectInputStream
             length = readInt();
             byte[] signature = new byte[length];
             read(signature);
-            ProxyFactory factory = new ProxyFactory();
+            ProxyFactory<?> factory = new ProxyFactory<>();
             // we must always use the cache and never use writeReplace when using
             // ProxyObjectOutputStream and ProxyObjectInputStream
             factory.setUseCache(true);
             factory.setUseWriteReplace(false);
             factory.setSuperclass(superClass);
             factory.setInterfaces(interfaces);
-            Class proxyClass = factory.createClass(signature);
+            Class<?> proxyClass = factory.createClass(signature);
             return ObjectStreamClass.lookup(proxyClass);
         } else {
             return super.readClassDescriptor();

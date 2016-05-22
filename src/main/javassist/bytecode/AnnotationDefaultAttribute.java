@@ -104,7 +104,7 @@ public class AnnotationDefaultAttribute extends AttributeInfo {
     /**
      * Copies this attribute and returns a new copy.
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
+    public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
         AnnotationsAttribute.Copier copier
             = new AnnotationsAttribute.Copier(info, constPool, newCp, classnames);
         try {
@@ -134,7 +134,7 @@ public class AnnotationDefaultAttribute extends AttributeInfo {
      * Changes the default value represented by this attribute.
      *
      * @param value         the new value.
-     * @see javassist.bytecode.annotation.Annotation#createMemberValue(ConstPool, CtClass)
+     * @see javassist.bytecode.annotation.CtAnnotation#createMemberValue(ConstPool, CtClass)
      */
     public void setDefaultValue(MemberValue value) {
         ByteArrayOutputStream output = new ByteArrayOutputStream();

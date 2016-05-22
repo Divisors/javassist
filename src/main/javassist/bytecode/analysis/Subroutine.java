@@ -28,17 +28,17 @@ import java.util.Set;
  */
 public class Subroutine {
     //private Set callers = new HashSet();
-    private List callers = new ArrayList();
-    private Set access = new HashSet();
+    private List<Integer> callers = new ArrayList<>();
+    private Set<Integer> access = new HashSet<>();
     private int start;
 
     public Subroutine(int start, int caller) {
         this.start = start;
-        callers.add(new Integer(caller));
+        callers.add(caller);
     }
 
     public void addCaller(int caller) {
-        callers.add(new Integer(caller));
+        callers.add(caller);
     }
 
     public int start() {
@@ -46,18 +46,18 @@ public class Subroutine {
     }
 
     public void access(int index) {
-        access.add(new Integer(index));
+        access.add(index);
     }
 
     public boolean isAccessed(int index) {
         return access.contains(new Integer(index));
     }
 
-    public Collection accessed() {
+    public Collection<Integer> accessed() {
         return access;
     }
 
-    public Collection callers() {
+    public Collection<Integer> callers() {
         return callers;
     }
 

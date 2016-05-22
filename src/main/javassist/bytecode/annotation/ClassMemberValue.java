@@ -89,7 +89,7 @@ public class ClassMemberValue extends MemberValue {
             return loadClass(cl, classname);
     }
 
-    Class getType(ClassLoader cl) throws ClassNotFoundException {
+	Class<Class<?>> getType(ClassLoader cl) throws ClassNotFoundException {
         return loadClass(cl, "java.lang.Class");
     }
 

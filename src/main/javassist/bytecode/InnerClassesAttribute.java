@@ -239,12 +239,13 @@ public class InnerClassesAttribute extends AttributeInfo {
      * @param classnames        pairs of replaced and substituted
      *                          class names.
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
-        byte[] src = get();
+    public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
+    	//TODO use ByteBuffer?
+        final byte[] src = get();
         byte[] dest = new byte[src.length];
         ConstPool cp = getConstPool();
         InnerClassesAttribute attr = new InnerClassesAttribute(newCp, dest);
-        int n = ByteArray.readU16bit(src, 0);
+        final int n = ByteArray.readU16bit(src, 0);
         ByteArray.write16bit(n, dest, 0);
         int j = 2;
         for (int i = 0; i < n; ++i) {

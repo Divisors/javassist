@@ -796,7 +796,8 @@ public class CodeIterator implements Opcode {
 
     // methods for implementing insertGap().
 
-    static class AlignmentException extends Exception {}
+    static class AlignmentException extends Exception {
+		private static final long serialVersionUID = 5086365386017203754L;}
 
     /**
      * insertGapCore0() inserts a gap (some NOPs).
@@ -1075,7 +1076,7 @@ public class CodeIterator implements Opcode {
         throws BadBytecode
     {
         Pointers pointers = new Pointers(0, 0, 0, etable, ca);
-        ArrayList jumps = makeJumpList(code, code.length, pointers);
+        ArrayList<Branch> jumps = makeJumpList(code, code.length, pointers);
         while (ldcs != null) {
             addLdcW(ldcs, jumps);
             ldcs = ldcs.next;
@@ -1085,7 +1086,7 @@ public class CodeIterator implements Opcode {
         return r;
     }
 
-    private static void addLdcW(CodeAttribute.LdcEntry ldcs, ArrayList jumps) {
+    private static void addLdcW(CodeAttribute.LdcEntry ldcs, ArrayList<Branch> jumps) {
         int where = ldcs.where;
         LdcW ldcw = new LdcW(where, ldcs.index);
         int s = jumps.size();
@@ -1119,7 +1120,7 @@ public class CodeIterator implements Opcode {
             return code;
 
         Pointers pointers = new Pointers(currentPos, mark, where, etable, ca);
-        ArrayList jumps = makeJumpList(code, code.length, pointers);
+        ArrayList<Branch> jumps = makeJumpList(code, code.length, pointers);
         byte[] r = insertGap2w(code, where, gapLength, exclusive, jumps, pointers);
         currentPos = pointers.cursor;
         mark = pointers.mark;
@@ -1135,16 +1136,14 @@ public class CodeIterator implements Opcode {
         return r;
     }
 
-    private static byte[] insertGap2w(byte[] code, int where, int gapLength,
-                                      boolean exclusive, ArrayList jumps, Pointers ptrs)
-        throws BadBytecode
-    {
-        int n = jumps.size();
-        if (gapLength > 0) {
-            ptrs.shiftPc(where, gapLength, exclusive);
-            for (int i = 0; i < n; i++)
-                ((Branch)jumps.get(i)).shift(where, gapLength, exclusive);
-        }
+	private static byte[] insertGap2w(byte[] code, int where, int gapLength, boolean exclusive, ArrayList<Branch> jumps,
+			Pointers ptrs) throws BadBytecode {
+		int n = jumps.size();
+		if (gapLength > 0) {
+			ptrs.shiftPc(where, gapLength, exclusive);
+			for (Branch jump : jumps)
+				jump.shift(where, gapLength, exclusive);
+		}
 
         boolean unstable = true;
         do {
@@ -1179,10 +1178,8 @@ public class CodeIterator implements Opcode {
         return makeExapndedCode(code, jumps, where, gapLength);
     }
 
-    private static ArrayList makeJumpList(byte[] code, int endPos, Pointers ptrs)
-        throws BadBytecode
-    {
-        ArrayList jumps = new ArrayList();
+	private static ArrayList<Branch> makeJumpList(byte[] code, int endPos, Pointers ptrs) throws BadBytecode {
+        ArrayList<Branch> jumps = new ArrayList<>();
         int nextPos;
         for (int i = 0; i < endPos; i = nextPos) {
             nextPos = nextOpcode(code, i);
@@ -1240,10 +1237,8 @@ public class CodeIterator implements Opcode {
         return jumps;
     }
 
-    private static byte[] makeExapndedCode(byte[] code, ArrayList jumps,
-                                           int where, int gapLength)
-        throws BadBytecode
-    {
+	private static byte[] makeExapndedCode(byte[] code, ArrayList<Branch> jumps, int where, int gapLength)
+			throws BadBytecode {
         int n = jumps.size();
         int size = code.length + gapLength;
         for (int i = 0; i < n; i++) {

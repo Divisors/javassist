@@ -45,7 +45,8 @@ import java.io.ObjectOutputStream;
  * @see javassist.tools.reflect.Metalevel
  */
 public class Metaobject implements Serializable {
-    protected ClassMetaobject classmetaobject;
+	private static final long serialVersionUID = -826998683719079212L;
+	protected ClassMetaobject classmetaobject;
     protected Metalevel baseobject;
     protected Method[] methods;
 
@@ -138,7 +139,7 @@ public class Metaobject implements Serializable {
      * formal parameter types of the method specified
      * by <code>identifier</code>.
      */
-    public final Class[] getParameterTypes(int identifier) {
+    public final Class<?>[] getParameterTypes(int identifier) {
         return methods[identifier].getParameterTypes();
     }
 
@@ -146,7 +147,7 @@ public class Metaobject implements Serializable {
      * Returns a <code>Class</code> objects representing the
      * return type of the method specified by <code>identifier</code>.
      */
-    public final Class getReturnType(int identifier) {
+    public final Class<?> getReturnType(int identifier) {
         return methods[identifier].getReturnType();
     }
 
@@ -158,7 +159,7 @@ public class Metaobject implements Serializable {
      * <p>Every subclass of this class should redefine this method.
      */
     public Object trapFieldRead(String name) {
-        Class jc = getClassMetaobject().getJavaClass();
+        Class<?> jc = getClassMetaobject().getJavaClass();
         try {
             return jc.getField(name).get(getObject());
         }
@@ -178,7 +179,7 @@ public class Metaobject implements Serializable {
      * <p>Every subclass of this class should redefine this method.
      */
     public void trapFieldWrite(String name, Object value) {
-        Class jc = getClassMetaobject().getJavaClass();
+        Class<?> jc = getClassMetaobject().getJavaClass();
         try {
             jc.getField(name).set(getObject(), value);
         }

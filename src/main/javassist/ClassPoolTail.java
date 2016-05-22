@@ -16,11 +16,17 @@
 
 package javassist;
 
-import java.io.*;
-import java.util.jar.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Hashtable;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 final class ClassPathList {
     ClassPathList next;
@@ -42,29 +48,24 @@ final class DirClassPath implements ClassPath {
     public InputStream openClassfile(String classname) {
         try {
             char sep = File.separatorChar;
-            String filename = directory + sep
-                + classname.replace('.', sep) + ".class";
+            String filename = directory + sep + classname.replace('.', sep) + ".class";
             return new FileInputStream(filename.toString());
+        } catch (FileNotFoundException | SecurityException e) {
+            return null;
         }
-        catch (FileNotFoundException e) {}
-        catch (SecurityException e) {}
-        return null;
     }
 
-    public URL find(String classname) {
-        char sep = File.separatorChar;
-        String filename = directory + sep
-            + classname.replace('.', sep) + ".class";
-        File f = new File(filename);
-        if (f.exists())
-            try {
-                return f.getCanonicalFile().toURI().toURL();
-            }
-            catch (MalformedURLException e) {}
-            catch (IOException e) {}
-
-        return null;
-    }
+	public URL find(String classname) {
+		char sep = File.separatorChar;
+		String filename = directory + sep + classname.replace('.', sep) + ".class";
+		File f = new File(filename);
+		if (f.exists())
+			try {
+				return f.getCanonicalFile().toURI().toURL();
+			} catch (IOException e) {}
+		
+		return null;
+	}
 
     public void close() {}
 
@@ -202,7 +203,7 @@ final class ClassPoolTail {
         return cp;
     }
 
-    public synchronized ClassPath appendClassPath(ClassPath cp) {
+    public synchronized void appendClassPath(ClassPath cp) {
         ClassPathList tail = new ClassPathList(cp, null);
         ClassPathList list = pathList;
         if (list == null)
@@ -213,8 +214,6 @@ final class ClassPoolTail {
 
             list.next = tail;
         }
-
-        return cp;
     }
 
     public synchronized void removeClassPath(ClassPath cp) {
@@ -233,8 +232,10 @@ final class ClassPoolTail {
         cp.close();
     }
 
-    public ClassPath appendSystemPath() {
-        return appendClassPath(new ClassClassPath());
+	public ClassPath appendSystemPath() {
+    	ClassPath cp = new ClassClassPath();
+        appendClassPath(cp);
+        return cp;
     }
 
     public ClassPath insertClassPath(String pathname)
@@ -242,16 +243,14 @@ final class ClassPoolTail {
     {
         return insertClassPath(makePathObject(pathname));
     }
-
-    public ClassPath appendClassPath(String pathname)
-        throws NotFoundException
-    {
-        return appendClassPath(makePathObject(pathname));
-    }
-
-    private static ClassPath makePathObject(String pathname)
-        throws NotFoundException
-    {
+	
+	public ClassPath appendClassPath(String pathname) throws NotFoundException {
+		ClassPath cp = makePathObject(pathname);
+		appendClassPath(cp);
+		return cp;
+	}
+	
+    private static ClassPath makePathObject(String pathname) throws NotFoundException {
         String lower = pathname.toLowerCase();
         if (lower.endsWith(".jar") || lower.endsWith(".zip"))
             return new JarClassPath(pathname);
@@ -270,18 +269,11 @@ final class ClassPoolTail {
     /**
      * This method does not close the output stream.
      */
-    void writeClassfile(String classname, OutputStream out)
-        throws NotFoundException, IOException, CannotCompileException
-    {
-        InputStream fin = openClassfile(classname);
-        if (fin == null)
-            throw new NotFoundException(classname);
-
-        try {
+    void writeClassfile(String classname, OutputStream out) throws NotFoundException, IOException, CannotCompileException {
+        try (InputStream fin = openClassfile(classname)) {
+        	if (fin == null)
+        		throw new NotFoundException(classname);
             copyStream(fin, out);
-        }
-        finally {
-            fin.close();
         }
     }
 
@@ -313,16 +305,14 @@ final class ClassPoolTail {
      * @throws NotFoundException    if any error is reported by ClassPath.
      */
     InputStream openClassfile(String classname)
-        throws NotFoundException
-    {
+        throws NotFoundException {
         ClassPathList list = pathList;
         InputStream ins = null;
         NotFoundException error = null;
         while (list != null) {
             try {
                 ins = list.path.openClassfile(classname);
-            }
-            catch (NotFoundException e) {
+            } catch (NotFoundException e) {
                 if (error == null)
                     error = e;
             }
@@ -336,7 +326,7 @@ final class ClassPoolTail {
         if (error != null)
             throw error;
         else
-            return null;    // not found
+        	throw new NotFoundException(classname);
     }
 
     /**
@@ -367,6 +357,7 @@ final class ClassPoolTail {
      * @return          the contents of that input stream
      */
     public static byte[] readStream(InputStream fin) throws IOException {
+    	//TODO optimize
         byte[][] bufs = new byte[8][];
         int bufsize = 4096;
 
@@ -401,9 +392,7 @@ final class ClassPoolTail {
      * until it reaches the end.  This method does not close the
      * streams.
      */
-    public static void copyStream(InputStream fin, OutputStream fout)
-        throws IOException
-    {
+	public static void copyStream(InputStream fin, OutputStream fout) throws IOException {
         int bufsize = 4096;
         byte[] buf = null;
         for (int i = 0; i < 64; ++i) {

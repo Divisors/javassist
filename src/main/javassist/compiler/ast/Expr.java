@@ -29,7 +29,8 @@ public class Expr extends ASTList implements TokenId {
      * Otherwise, the object should be an instance of a subclass.
      */
 
-    protected int operatorId;
+	private static final long serialVersionUID = -3988150566082729247L;
+	protected int operatorId;
 
     Expr(int op, ASTree _head, ASTList _tail) {
         super(_head, _tail);

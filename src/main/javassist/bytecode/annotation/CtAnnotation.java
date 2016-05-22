@@ -24,6 +24,7 @@ import javassist.CtMethod;
 import javassist.NotFoundException;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.Iterator;
@@ -45,7 +46,7 @@ import java.util.Iterator;
  * @author Shigeru Chiba
  * @author <a href="mailto:adrian@jboss.org">Adrian Brock</a>
  */
-public class Annotation {
+public class CtAnnotation {
     static class Pair {
         int name;
         MemberValue value;
@@ -53,7 +54,7 @@ public class Annotation {
 
     ConstPool pool;
     int typeIndex;
-    LinkedHashMap members;    // this sould be LinkedHashMap
+    LinkedHashMap<Object, Object> members;    // this should be LinkedHashMap
                         // but it is not supported by JDK 1.3.
 
     /**
@@ -68,7 +69,7 @@ public class Annotation {
      *
      * @see #addMemberValue(String, MemberValue)
      */
-    public Annotation(int type, ConstPool cp) {
+    public CtAnnotation(int type, ConstPool cp) {
         pool = cp;
         typeIndex = type;
         members = null;
@@ -83,7 +84,7 @@ public class Annotation {
      *
      * @see #addMemberValue(String, MemberValue)
      */
-    public Annotation(String typeName, ConstPool cp) {
+    public CtAnnotation(String typeName, ConstPool cp) {
         this(cp.addUtf8Info(Descriptor.of(typeName)), cp);
     }
 
@@ -96,19 +97,16 @@ public class Annotation {
      * @param clazz     the interface.
      * @throws NotFoundException when the clazz is not found 
      */
-    public Annotation(ConstPool cp, CtClass clazz)
-        throws NotFoundException
-    {
+	public CtAnnotation(ConstPool cp, CtClass clazz) throws NotFoundException {
         // todo Enums are not supported right now.
         this(cp.addUtf8Info(Descriptor.of(clazz.getName())), cp);
 
         if (!clazz.isInterface())
-            throw new RuntimeException(
-                "Only interfaces are allowed for Annotation creation.");
+            throw new RuntimeException("Only interfaces are allowed for Annotation creation.");
 
         CtMethod methods[] = clazz.getDeclaredMethods();
         if (methods.length > 0) {
-            members = new LinkedHashMap();
+            members = new LinkedHashMap<>();
         }
 
         for (int i = 0; i < methods.length; i++) {
@@ -127,9 +125,7 @@ public class Annotation {
      * @return the member value
      * @throws NotFoundException when the type is not found
      */
-    public static MemberValue createMemberValue(ConstPool cp, CtClass type)
-        throws NotFoundException
-    {
+	public static MemberValue createMemberValue(ConstPool cp, CtClass type) throws NotFoundException {
         if (type == CtClass.booleanType)
             return new BooleanMemberValue(cp);
         else if (type == CtClass.byteType)
@@ -156,7 +152,7 @@ public class Annotation {
             return new ArrayMemberValue(member, cp);
         }
         else if (type.isInterface()) {
-            Annotation info = new Annotation(cp, type);
+            CtAnnotation info = new CtAnnotation(cp, type);
             return new AnnotationMemberValue(info, cp);
         }
         else {
@@ -196,7 +192,7 @@ public class Annotation {
         p.name = pool.addUtf8Info(name);
         p.value = value;
         if (members == null)
-            members = new LinkedHashMap();
+            members = new LinkedHashMap<>();
 
         members.put(name, p);
     }
@@ -204,7 +200,7 @@ public class Annotation {
     private void addMemberValue(Pair pair) {
         String name = pool.getUtf8Info(pair.name);
         if (members == null)
-            members = new LinkedHashMap();
+            members = new LinkedHashMap<>();
 
         members.put(name, pair);
     }
@@ -217,7 +213,7 @@ public class Annotation {
         buf.append(getTypeName());
         if (members != null) {
             buf.append("(");
-            Iterator mit = members.keySet().iterator();
+            Iterator<Object> mit = members.keySet().iterator();
             while (mit.hasNext()) {
                 String name = (String)mit.next();
                 buf.append(name).append("=").append(getMemberValue(name));
@@ -244,7 +240,7 @@ public class Annotation {
      *
      * @return null if no members are defined.
      */
-    public Set getMemberNames() {
+    public Set<Object> getMemberNames() {
         if (members == null)
             return null;
         else
@@ -289,12 +285,9 @@ public class Annotation {
      * @throws ClassNotFoundException   if the class cannot found.
      * @throws NoSuchClassError         if the class linkage fails.
      */
-    public Object toAnnotationType(ClassLoader cl, ClassPool cp)
-        throws ClassNotFoundException, NoSuchClassError
-    {
-        return AnnotationImpl.make(cl,
-                        MemberValue.loadClass(cl, getTypeName()),
-                        cp, this);
+    public <A extends Annotation> A toAnnotationType(ClassLoader cl, ClassPool cp)
+        throws ClassNotFoundException, NoSuchClassError {
+        return AnnotationImpl.make(cl, MemberValue.loadClass(cl, getTypeName()), cp, this);
     }
 
     /**
@@ -311,7 +304,7 @@ public class Annotation {
         }
 
         writer.annotation(typeName, members.size());
-        Iterator it = members.values().iterator();
+        Iterator<Object> it = members.values().iterator();
         while (it.hasNext()) {
             Pair pair = (Pair)it.next();
             writer.memberValuePair(pair.name);
@@ -326,15 +319,15 @@ public class Annotation {
     public boolean equals(Object obj) {
         if (obj == this)
             return true;
-        if (obj == null || obj instanceof Annotation == false)
+        if (obj == null || obj instanceof CtAnnotation == false)
             return false;
         
-        Annotation other = (Annotation) obj;
+        CtAnnotation other = (CtAnnotation) obj;
 
         if (getTypeName().equals(other.getTypeName()) == false)
             return false;
 
-        LinkedHashMap otherMembers = other.members;
+        LinkedHashMap<Object, Object> otherMembers = other.members;
         if (members == otherMembers)
             return true;
         else if (members == null)

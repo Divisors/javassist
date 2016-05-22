@@ -45,9 +45,10 @@ public class Dump {
             return;
         }
 
-        DataInputStream in = new DataInputStream(
-                                         new FileInputStream(args[0]));
-        ClassFile w = new ClassFile(in);
+        ClassFile w;
+        try (DataInputStream in = new DataInputStream(new FileInputStream(args[0]))) {
+        	w = new ClassFile(in);
+        }
         PrintWriter out = new PrintWriter(System.out, true);
         out.println("*** constant pool ***");
         w.getConstPool().print(out);

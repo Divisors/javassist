@@ -16,10 +16,9 @@
 package javassist.convert;
 
 import javassist.CannotCompileException;
-import javassist.ClassPool;
+import javassist.CodeConverter.ArrayAccessReplacementMethodNames;
 import javassist.CtClass;
 import javassist.NotFoundException;
-import javassist.CodeConverter.ArrayAccessReplacementMethodNames;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.CodeIterator;
 import javassist.bytecode.ConstPool;

@@ -20,7 +20,9 @@ package javassist.tools.reflect;
  * Signals that <code>ClassMetaobject.newInstance()</code> fails.
  */
 public class CannotCreateException extends Exception {
-    public CannotCreateException(String s) {
+	private static final long serialVersionUID = 712422413642716427L;
+
+	public CannotCreateException(String s) {
         super(s);
     }
 

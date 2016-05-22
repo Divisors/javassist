@@ -99,7 +99,7 @@ import javassist.bytecode.annotation.*;
  * <code>javac</code> of JDK 1.4 or earlier.  Otherwise, it is not necessary.
  *
  * @see AnnotationDefaultAttribute
- * @see javassist.bytecode.annotation.Annotation
+ * @see javassist.bytecode.annotation.CtAnnotation
  */
 public class AnnotationsAttribute extends AttributeInfo {
     /**
@@ -135,7 +135,7 @@ public class AnnotationsAttribute extends AttributeInfo {
      * @param cp            constant pool
      * @param attrname      attribute name (<code>visibleTag</code> or
      *                      <code>invisibleTag</code>).
-     * @see #setAnnotations(Annotation[])
+     * @see #setAnnotations(CtAnnotation[])
      */
     public AnnotationsAttribute(ConstPool cp, String attrname) {
         this(cp, attrname, new byte[] { 0, 0 });
@@ -160,7 +160,7 @@ public class AnnotationsAttribute extends AttributeInfo {
     /**
      * Copies this attribute and returns a new copy.
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
+    public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
         Copier copier = new Copier(info, constPool, newCp, classnames);
         try {
             copier.annotationArray();
@@ -180,8 +180,8 @@ public class AnnotationsAttribute extends AttributeInfo {
      * @return null if the specified annotation type is not included.
      * @see #getAnnotations()
      */
-    public Annotation getAnnotation(String type) {
-        Annotation[] annotations = getAnnotations();
+    public CtAnnotation getAnnotation(String type) {
+        CtAnnotation[] annotations = getAnnotations();
         for (int i = 0; i < annotations.length; i++) {
             if (annotations[i].getTypeName().equals(type))
                 return annotations[i];
@@ -196,9 +196,9 @@ public class AnnotationsAttribute extends AttributeInfo {
      *
      * @param annotation        the added annotation.
      */
-    public void addAnnotation(Annotation annotation) {
+    public void addAnnotation(CtAnnotation annotation) {
         String type = annotation.getTypeName();
-        Annotation[] annotations = getAnnotations();
+        CtAnnotation[] annotations = getAnnotations();
         for (int i = 0; i < annotations.length; i++) {
             if (annotations[i].getTypeName().equals(type)) {
                 annotations[i] = annotation;
@@ -207,7 +207,7 @@ public class AnnotationsAttribute extends AttributeInfo {
             }
         }
 
-        Annotation[] newlist = new Annotation[annotations.length + 1];
+        CtAnnotation[] newlist = new CtAnnotation[annotations.length + 1];
         System.arraycopy(annotations, 0, newlist, 0, annotations.length);
         newlist[annotations.length] = annotation;
         setAnnotations(newlist);
@@ -220,9 +220,9 @@ public class AnnotationsAttribute extends AttributeInfo {
      * this object unless the tree is copied back to this object by
      * <code>setAnnotations()</code>.
      *
-     * @see #setAnnotations(Annotation[])
+     * @see #setAnnotations(CtAnnotation[])
      */
-    public Annotation[] getAnnotations() {
+    public CtAnnotation[] getAnnotations() {
         try {
             return new Parser(info, constPool).parseAnnotations();
         }
@@ -238,7 +238,7 @@ public class AnnotationsAttribute extends AttributeInfo {
      * @param annotations           the data structure representing the
      *                              new annotations.
      */
-    public void setAnnotations(Annotation[] annotations) {
+    public void setAnnotations(CtAnnotation[] annotations) {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         AnnotationsWriter writer = new AnnotationsWriter(output, constPool);
         try {
@@ -263,8 +263,8 @@ public class AnnotationsAttribute extends AttributeInfo {
      * @param annotation    the data structure representing
      *                      the new annotation.
      */
-    public void setAnnotation(Annotation annotation) {
-        setAnnotations(new Annotation[] { annotation });
+    public void setAnnotation(CtAnnotation annotation) {
+        setAnnotations(new CtAnnotation[] { annotation });
     }
 
     /**
@@ -272,12 +272,12 @@ public class AnnotationsAttribute extends AttributeInfo {
      * @param newname       a JVM class name.
      */
     void renameClass(String oldname, String newname) {
-        HashMap map = new HashMap();
+        HashMap<String, String> map = new HashMap<>();
         map.put(oldname, newname);
         renameClass(map);
     }
 
-    void renameClass(Map classnames) {
+    void renameClass(Map<String, String> classnames) {
         Renamer renamer = new Renamer(info, getConstPool(), classnames);
         try {
             renamer.annotationArray();
@@ -286,13 +286,13 @@ public class AnnotationsAttribute extends AttributeInfo {
         }
     }
 
-    void getRefClasses(Map classnames) { renameClass(classnames); }
+    void getRefClasses(Map<String, String> classnames) { renameClass(classnames); }
 
     /**
      * Returns a string representation of this object.
      */
     public String toString() {
-        Annotation[] a = getAnnotations();
+        CtAnnotation[] a = getAnnotations();
         StringBuilder sbuf = new StringBuilder();
         int i = 0;
         while (i < a.length) {
@@ -432,7 +432,7 @@ public class AnnotationsAttribute extends AttributeInfo {
 
     static class Renamer extends Walker {
         ConstPool cpool;
-        Map classnames;
+        Map<String, String> classnames;
 
         /**
          * Constructs a renamer.  It renames some class names
@@ -443,7 +443,7 @@ public class AnnotationsAttribute extends AttributeInfo {
          * @param map       pairs of replaced and substituted class names.
          *                  It can be null.
          */
-        Renamer(byte[] info, ConstPool cp, Map map) {
+        Renamer(byte[] info, ConstPool cp, Map<String, String> map) {
             super(info);
             cpool = cp;
             classnames = map;
@@ -480,7 +480,7 @@ public class AnnotationsAttribute extends AttributeInfo {
         ByteArrayOutputStream output;
         AnnotationsWriter writer;
         ConstPool srcPool, destPool;
-        Map classnames;
+        Map<String, String> classnames;
 
         /**
          * Constructs a copier.  This copier renames some class names
@@ -493,11 +493,11 @@ public class AnnotationsAttribute extends AttributeInfo {
          * @param map       pairs of replaced and substituted class names.
          *                  It can be null.
          */
-        Copier(byte[] info, ConstPool src, ConstPool dest, Map map) {
+        Copier(byte[] info, ConstPool src, ConstPool dest, Map<String, String> map) {
             this(info, src, dest, map, true); 
         }
 
-        Copier(byte[] info, ConstPool src, ConstPool dest, Map map, boolean makeWriter) {
+        Copier(byte[] info, ConstPool src, ConstPool dest, Map<String, String> map, boolean makeWriter) {
             super(info);
             output = new ByteArrayOutputStream();
             if (makeWriter)
@@ -592,9 +592,9 @@ public class AnnotationsAttribute extends AttributeInfo {
 
     static class Parser extends Walker {
         ConstPool pool;
-        Annotation[][] allParams;   // all parameters
-        Annotation[] allAnno;       // all annotations
-        Annotation currentAnno;     // current annotation
+        CtAnnotation[][] allParams;   // all parameters
+        CtAnnotation[] allAnno;       // all annotations
+        CtAnnotation currentAnno;     // current annotation
         MemberValue currentMember;  // current member
 
         /**
@@ -609,12 +609,12 @@ public class AnnotationsAttribute extends AttributeInfo {
             pool = cp;
         }
 
-        Annotation[][] parseParameters() throws Exception {
+        CtAnnotation[][] parseParameters() throws Exception {
             parameters();
             return allParams;
         }
 
-        Annotation[] parseAnnotations() throws Exception {
+        CtAnnotation[] parseAnnotations() throws Exception {
             annotationArray();
             return allAnno;
         }
@@ -625,7 +625,7 @@ public class AnnotationsAttribute extends AttributeInfo {
         }
 
         void parameters(int numParam, int pos) throws Exception {
-            Annotation[][] params = new Annotation[numParam][];
+            CtAnnotation[][] params = new CtAnnotation[numParam][];
             for (int i = 0; i < numParam; ++i) {
                 pos = annotationArray(pos);
                 params[i] = allAnno;
@@ -635,7 +635,7 @@ public class AnnotationsAttribute extends AttributeInfo {
         }
 
         int annotationArray(int pos, int num) throws Exception {
-            Annotation[] array = new Annotation[num];
+            CtAnnotation[] array = new CtAnnotation[num];
             for (int i = 0; i < num; ++i) {
                 pos = annotation(pos);
                 array[i] = currentAnno;
@@ -646,7 +646,7 @@ public class AnnotationsAttribute extends AttributeInfo {
         }
 
         int annotation(int pos, int type, int numPairs) throws Exception {
-            currentAnno = new Annotation(type, pool);
+            currentAnno = new CtAnnotation(type, pool);
             return super.annotation(pos, type, numPairs);
         }
 
@@ -709,7 +709,7 @@ public class AnnotationsAttribute extends AttributeInfo {
         }
 
         int annotationMemberValue(int pos) throws Exception {
-            Annotation anno = currentAnno;
+            CtAnnotation anno = currentAnno;
             pos = super.annotationMemberValue(pos);
             currentMember = new AnnotationMemberValue(currentAnno, pool);
             currentAnno = anno;

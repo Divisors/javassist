@@ -19,7 +19,8 @@ package javassist.compiler;
 import javassist.compiler.ast.ASTree;
 
 public class NoFieldException extends CompileError {
-    private String fieldName;
+	private static final long serialVersionUID = 4412708214950596625L;
+	private String fieldName;
     private ASTree expr;
 
     /* NAME must be JVM-internal representation.

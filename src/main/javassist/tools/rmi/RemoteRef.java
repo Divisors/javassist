@@ -16,12 +16,15 @@
 
 package javassist.tools.rmi;
 
+import java.io.Serializable;
+
 /**
  * Remote reference.  This class is internally used for sending a remote
  * reference through a network stream.
  */
-public class RemoteRef implements java.io.Serializable {
-    public int oid;
+public class RemoteRef implements Serializable {
+	private static final long serialVersionUID = 177480435003469738L;
+	public int oid;
     public String classname;
 
     public RemoteRef(int i) {

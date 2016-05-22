@@ -187,25 +187,21 @@ public class Webserver {
     }
 
     final void process(Socket clnt) throws IOException {
-        InputStream in = new BufferedInputStream(clnt.getInputStream());
-        String cmd = readLine(in);
-        logging(clnt.getInetAddress().getHostName(),
-                new Date().toString(), cmd);
-        while (skipLine(in) > 0){
+        try (BufferedInputStream in = new BufferedInputStream(clnt.getInputStream());
+        		BufferedOutputStream out = new BufferedOutputStream(clnt.getOutputStream())) {
+			String cmd = readLine(in);
+			logging(clnt.getInetAddress().getHostName(), new Date().toString(), cmd);
+			while (skipLine(in) > 0);
+			
+			try {
+				doReply(in, out, cmd);
+			} catch (BadHttpRequest e) {
+				replyError(out, e);
+			}
+			//out is automatically flushed
+        } finally {
+        	clnt.close();
         }
-
-        OutputStream out = new BufferedOutputStream(clnt.getOutputStream());
-        try {
-            doReply(in, out, cmd);
-        }
-        catch (BadHttpRequest e) {
-            replyError(out, e);
-        }
-
-        out.flush();
-        in.close();
-        out.close();
-        clnt.close();
     }
 
     private String readLine(InputStream in) throws IOException {
@@ -234,10 +230,7 @@ public class Webserver {
      * @param out       the output stream to a client
      * @param cmd       the command received from a client
      */
-    public void doReply(InputStream in, OutputStream out, String cmd)
-        throws IOException, BadHttpRequest
-    {
-        int len;
+	public void doReply(InputStream in, OutputStream out, String cmd) throws IOException, BadHttpRequest {
         int fileType;
         String filename, urlName;
 
@@ -257,66 +250,52 @@ public class Webserver {
         else
             fileType = typeText;        // or textUnknown
 
-        len = filename.length();
-        if (fileType == typeClass
-            && letUsersSendClassfile(out, filename, len))
+        if (fileType == typeClass && letUsersSendClassfile(out, filename, filename.length()))
             return;
 
-        checkFilename(filename, len);
+        checkFilename(filename, filename.length());
         if (htmlfileBase != null)
             filename = htmlfileBase + filename;
 
-        if (File.separatorChar != '/')
-            filename = filename.replace('/', File.separatorChar);
+		if (File.separatorChar != '/')
+			filename = filename.replace('/', File.separatorChar);
+		
+		File file = new File(filename);
+		if (file.canRead()) {
+			sendHeader(out, file.length(), fileType);
+			try (FileInputStream fin = new FileInputStream(file)) {
+				byte[] filebuffer = new byte[4096];
+				int len;
+				while ((len = fin.read(filebuffer)) > 0)
+					out.write(filebuffer, 0, len);
+			}
+			return;
+		}
+		
+		// If the file is not found under the html-file directory,
+		// then Class.getResourceAsStream() is tried.
+		
+		if (fileType == typeClass) {
+			try (InputStream fin = getClass().getResourceAsStream("/" + urlName)) {
+				if (fin != null) {
+					ByteArrayOutputStream barray = new ByteArrayOutputStream();
+					byte[] filebuffer = new byte[4096];
+					int len;
+					while ((len = fin.read(filebuffer)) > 0)
+						barray.write(filebuffer, 0, len);
+					
+					byte[] classfile = barray.toByteArray();
+					sendHeader(out, classfile.length, typeClass);
+					out.write(classfile);
+					return;
+				}
+			}
+		}
+		
+		throw new BadHttpRequest();
+	}
 
-        File file = new File(filename);
-        if (file.canRead()) {
-            sendHeader(out, file.length(), fileType);
-            FileInputStream fin = new FileInputStream(file);
-            byte[] filebuffer = new byte[4096];
-            for (;;) {
-                len = fin.read(filebuffer);
-                if (len <= 0)
-                    break;
-                else
-                    out.write(filebuffer, 0, len);
-            }
-
-            fin.close();
-            return;
-        }
-
-        // If the file is not found under the html-file directory,
-        // then Class.getResourceAsStream() is tried.
-
-        if (fileType == typeClass) {
-            InputStream fin
-                = getClass().getResourceAsStream("/" + urlName);
-            if (fin != null) {
-                ByteArrayOutputStream barray = new ByteArrayOutputStream();
-                byte[] filebuffer = new byte[4096];
-                for (;;) {
-                    len = fin.read(filebuffer);
-                    if (len <= 0)
-                        break;
-                    else
-                        barray.write(filebuffer, 0, len);
-                }
-
-                byte[] classfile = barray.toByteArray();
-                sendHeader(out, classfile.length, typeClass);
-                out.write(classfile);
-                fin.close();
-                return;
-            }
-        }
-
-        throw new BadHttpRequest();
-    }
-
-    private void checkFilename(String filename, int len)
-        throws BadHttpRequest
-    {
+	private void checkFilename(String filename, int len) throws BadHttpRequest {
         for (int i = 0; i < len; ++i) {
             char c = filename.charAt(i);
             if (!Character.isJavaIdentifierPart(c) && c != '.' && c != '/')
@@ -327,16 +306,13 @@ public class Webserver {
             throw new BadHttpRequest();
     }
 
-    private boolean letUsersSendClassfile(OutputStream out,
-                                          String filename, int length)
-        throws IOException, BadHttpRequest
-    {
-        if (classPool == null)
+	private boolean letUsersSendClassfile(OutputStream out, String filename, int length)
+			throws IOException, BadHttpRequest {
+		if (classPool == null)
             return false;
 
-        byte[] classfile;
-        String classname
-            = filename.substring(0, length - 6).replace('/', '.');
+		byte[] classfile;
+		String classname = filename.substring(0, length - 6).replace('/', '.');
         try {
             if (translator != null)
                 translator.onLoad(classPool, classname);
@@ -378,9 +354,7 @@ public class Webserver {
         out.write(endofline);
     }
 
-    private void replyError(OutputStream out, BadHttpRequest e)
-        throws IOException
-    {
+	private void replyError(OutputStream out, BadHttpRequest e) throws IOException {
         logging2("bad request: " + e.toString());
         out.write("HTTP/1.0 400 Bad Request".getBytes());
         out.write(endofline);

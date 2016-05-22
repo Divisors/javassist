@@ -57,7 +57,8 @@ public class TypeAnnotationsAttribute extends AttributeInfo {
     /**
      * Copies this attribute and returns a new copy.
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
+    @Override
+    public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
         Copier copier = new Copier(info, constPool, newCp, classnames);
         try {
             copier.annotationArray();
@@ -73,21 +74,23 @@ public class TypeAnnotationsAttribute extends AttributeInfo {
      * @param newname       a JVM class name.
      */
     void renameClass(String oldname, String newname) {
-        HashMap map = new HashMap();
+        HashMap<String, String> map = new HashMap<>();
         map.put(oldname, newname);
         renameClass(map);
     }
 
-    void renameClass(Map classnames) {
-        Renamer renamer = new Renamer(info, getConstPool(), classnames);
-        try {
-            renamer.annotationArray();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+	void renameClass(Map<String, String> classnames) {
+		Renamer renamer = new Renamer(info, getConstPool(), classnames);
+		try {
+			renamer.annotationArray();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-    void getRefClasses(Map classnames) { renameClass(classnames); }
+	void getRefClasses(Map<String, String> classnames) {
+		renameClass(classnames);
+	}
 
     /**
      * To visit each elements of the type annotation attribute,
@@ -159,7 +162,8 @@ public class TypeAnnotationsAttribute extends AttributeInfo {
             case 0x42: {
                 int index = ByteArray.readU16bit(info, pos); 
                 catchTarget(pos, index);
-                return pos + 2; }
+                return pos + 2;
+                }
             case 0x43:
             case 0x44:
             case 0x45:
@@ -239,7 +243,7 @@ public class TypeAnnotationsAttribute extends AttributeInfo {
     static class Renamer extends AnnotationsAttribute.Renamer {
         SubWalker sub;
 
-        Renamer(byte[] attrInfo, ConstPool cp, Map map) {
+        Renamer(byte[] attrInfo, ConstPool cp, Map<String, String> map) {
             super(attrInfo, cp, map);
             sub = new SubWalker(attrInfo);
         }
@@ -259,7 +263,7 @@ public class TypeAnnotationsAttribute extends AttributeInfo {
     static class Copier extends AnnotationsAttribute.Copier {
         SubCopier sub;
 
-        Copier(byte[] attrInfo, ConstPool src, ConstPool dest, Map map) {
+        Copier(byte[] attrInfo, ConstPool src, ConstPool dest, Map<String, String> map) {
             super(attrInfo, src, dest, map, false);
             TypeAnnotationsWriter w = new TypeAnnotationsWriter(output, dest);
             writer = w;
@@ -281,10 +285,10 @@ public class TypeAnnotationsAttribute extends AttributeInfo {
 
     static class SubCopier extends SubWalker {
         ConstPool srcPool, destPool;
-        Map classnames;
+        Map<String, String> classnames;
         TypeAnnotationsWriter writer;
 
-        SubCopier(byte[] attrInfo, ConstPool src, ConstPool dest, Map map,
+        SubCopier(byte[] attrInfo, ConstPool src, ConstPool dest, Map<String, String> map,
                 TypeAnnotationsWriter w)
         {
             super(attrInfo);

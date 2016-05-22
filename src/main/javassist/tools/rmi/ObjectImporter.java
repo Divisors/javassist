@@ -16,10 +16,18 @@
 
 package javassist.tools.rmi;
 
-import java.io.*;
-import java.net.*;
 import java.applet.Applet;
-import java.lang.reflect.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.lang.reflect.Constructor;
+import java.net.Socket;
+import java.net.URL;
 
 /**
  * The object importer enables applets to call a method on a remote
@@ -72,8 +80,9 @@ import java.lang.reflect.*;
  * @see javassist.tools.rmi.RemoteException
  * @see javassist.tools.web.Viewer
  */
-public class ObjectImporter implements java.io.Serializable {
-    private final byte[] endofline = { 0x0d, 0x0a };
+public class ObjectImporter implements Serializable {
+	private static final long serialVersionUID = -3901180576777175455L;
+	private final byte[] endofline = { 0x0d, 0x0a };
     private String servername, orgServername;
     private int port, orgPort;
 
@@ -153,27 +162,25 @@ public class ObjectImporter implements java.io.Serializable {
     public Object lookupObject(String name) throws ObjectNotFoundException
     {
         try {
-            Socket sock = new Socket(servername, port);
-            OutputStream out = sock.getOutputStream();
-            out.write(lookupCommand);
-            out.write(endofline);
-            out.write(endofline);
-
-            ObjectOutputStream dout = new ObjectOutputStream(out);
-            dout.writeUTF(name);
-            dout.flush();
-
-            InputStream in = new BufferedInputStream(sock.getInputStream());
-            skipHeader(in);
-            ObjectInputStream din = new ObjectInputStream(in);
-            int n = din.readInt();
-            String classname = din.readUTF();
-            din.close();
-            dout.close();
-            sock.close();
-
-            if (n >= 0)
-                return createProxy(n, classname);
+            try (Socket sock = new Socket(servername, port);
+            		InputStream in = new BufferedInputStream(sock.getInputStream());
+            		OutputStream out = sock.getOutputStream()) {
+	            out.write(lookupCommand);
+	            out.write(endofline);
+	            out.write(endofline);
+	
+	            ObjectOutputStream dout = new ObjectOutputStream(out);
+	            dout.writeUTF(name);
+	            dout.flush();
+	
+	            
+	            skipHeader(in);
+	            ObjectInputStream din = new ObjectInputStream(in);
+	            int n = din.readInt();
+	            String classname = din.readUTF();
+	            if (n >= 0)
+	                return createProxy(n, classname);
+            }
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -183,13 +190,12 @@ public class ObjectImporter implements java.io.Serializable {
         throw new ObjectNotFoundException(name);
     }
 
-    private static final Class[] proxyConstructorParamTypes
-        = new Class[] { ObjectImporter.class, int.class };
+	private static final Class<?>[] proxyConstructorParamTypes = new Class[] { ObjectImporter.class, int.class };
 
     private Object createProxy(int oid, String classname) throws Exception {
-        Class c = Class.forName(classname);
-        Constructor cons = c.getConstructor(proxyConstructorParamTypes);
-        return cons.newInstance(new Object[] { this, new Integer(oid) });
+        Class<?> c = Class.forName(classname);
+        Constructor<?> cons = c.getConstructor(proxyConstructorParamTypes);
+        return cons.newInstance(this, new Integer(oid));
     }
 
     /**
@@ -199,14 +205,14 @@ public class ObjectImporter implements java.io.Serializable {
      *
      * <p>This method is called by only proxy objects.
      */
-    public Object call(int objectid, int methodid, Object[] args)
-        throws RemoteException
-    {
+	public Object call(int objectid, int methodid, Object...args) throws RemoteException {
         boolean result;
         Object rvalue;
         String errmsg;
 
-        try {
+		try (Socket sock = new Socket(servername, port);
+				OutputStream out = new BufferedOutputStream(sock.getOutputStream());
+				InputStream ins = new BufferedInputStream(sock.getInputStream());) {
             /* This method establishes a raw tcp connection for sending
              * a POST message.  Thus the object cannot communicate a
              * remote object beyond a fire wall.  To avoid this problem,
@@ -222,9 +228,7 @@ public class ObjectImporter implements java.io.Serializable {
              *
              * lookupObject() has the same problem.
              */
-            Socket sock = new Socket(servername, port);
-            OutputStream out = new BufferedOutputStream(
-                                                sock.getOutputStream());
+            
             out.write(rmiCommand);
             out.write(endofline);
             out.write(endofline);
@@ -235,7 +239,6 @@ public class ObjectImporter implements java.io.Serializable {
             writeParameters(dout, args);
             dout.flush();
 
-            InputStream ins = new BufferedInputStream(sock.getInputStream());
             skipHeader(ins);
             ObjectInputStream din = new ObjectInputStream(ins);
             result = din.readBoolean();
@@ -254,16 +257,13 @@ public class ObjectImporter implements java.io.Serializable {
                 RemoteRef ref = (RemoteRef)rvalue;
                 rvalue = createProxy(ref.oid, ref.classname);
             }
-        }
-        catch (ClassNotFoundException e) {
-            throw new RemoteException(e);
-        }
-        catch (IOException e) {
-            throw new RemoteException(e);
-        }
-        catch (Exception e) {
-            throw new RemoteException(e);
-        }
+		} catch (ClassNotFoundException e) {
+			throw new RemoteException(e);
+		} catch (IOException e) {
+			throw new RemoteException(e);
+		} catch (Exception e) {
+			throw new RemoteException(e);
+		}
 
         if (result)
             return rvalue;

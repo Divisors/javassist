@@ -28,8 +28,9 @@ import java.lang.IllegalAccessException;
  * @see javassist.tools.reflect.ClassMetaobject#invoke(Object, int, Object[])
  */
 public class CannotInvokeException extends RuntimeException {
-
-    private Throwable err = null;
+	private static final long serialVersionUID = -7371715778904140537L;
+	
+	private Throwable err = null;
 
     /**
      * Returns the cause of this exception.  It may return null.

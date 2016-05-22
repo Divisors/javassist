@@ -16,6 +16,8 @@
 
 package javassist;
 
+import java.lang.annotation.Annotation;
+
 /**
  * An instance of <code>CtMember</code> represents a field, a constructor,
  * or a method.
@@ -31,7 +33,7 @@ public abstract class CtMember {
     static class Cache extends CtMember {
         protected void extendToString(StringBuffer buffer) {}
         public boolean hasAnnotation(String clz) { return false; }
-        public Object getAnnotation(Class clz)
+        public <A extends Annotation> A getAnnotation(Class<A> clz)
             throws ClassNotFoundException { return null; }
         public Object[] getAnnotations()
             throws ClassNotFoundException { return null; }
@@ -214,7 +216,7 @@ public abstract class CtMember {
      * @return <code>true</code> if the annotation is found, otherwise <code>false</code>.
      * @since 3.11
      */
-    public boolean hasAnnotation(Class clz) {
+    public boolean hasAnnotation(Class<? extends Annotation> clz) {
         return hasAnnotation(clz.getName());
     }
 
@@ -238,7 +240,7 @@ public abstract class CtMember {
      * @return the annotation if found, otherwise <code>null</code>.
      * @since 3.11
      */
-    public abstract Object getAnnotation(Class annotationType) throws ClassNotFoundException;
+    public abstract <A extends Annotation> A getAnnotation(Class<A> annotationType) throws ClassNotFoundException;
 
     /**
      * Returns the annotations associated with this member.

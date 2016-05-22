@@ -62,7 +62,7 @@ public class ByteMemberValue extends MemberValue {
         return new Byte(getValue());
     }
 
-    Class getType(ClassLoader cl) {
+    Class<?> getType(ClassLoader cl) {
         return byte.class;
     }
 

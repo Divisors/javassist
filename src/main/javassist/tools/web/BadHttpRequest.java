@@ -20,7 +20,9 @@ package javassist.tools.web;
  * Thrown when receiving an invalid HTTP request.
  */
 public class BadHttpRequest extends Exception {
-    private Exception e;
+	private static final long serialVersionUID = 6994378897220103749L;
+	
+	private Exception e;
 
     public BadHttpRequest() { e = null; }
 

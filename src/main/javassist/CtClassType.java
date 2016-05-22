@@ -16,31 +16,32 @@
 
 package javassist;
 
-import java.lang.ref.WeakReference;
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
+import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+import javassist.CtMember.Cache;
 import javassist.bytecode.AccessFlag;
-import javassist.bytecode.AttributeInfo;
 import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.AttributeInfo;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.Bytecode;
 import javassist.bytecode.ClassFile;
 import javassist.bytecode.CodeAttribute;
-import javassist.bytecode.ConstantAttribute;
 import javassist.bytecode.CodeIterator;
 import javassist.bytecode.ConstPool;
+import javassist.bytecode.ConstantAttribute;
 import javassist.bytecode.Descriptor;
 import javassist.bytecode.EnclosingMethodAttribute;
 import javassist.bytecode.FieldInfo;
@@ -48,7 +49,8 @@ import javassist.bytecode.InnerClassesAttribute;
 import javassist.bytecode.MethodInfo;
 import javassist.bytecode.ParameterAnnotationsAttribute;
 import javassist.bytecode.SignatureAttribute;
-import javassist.bytecode.annotation.Annotation;
+import javassist.bytecode.annotation.AnnotationImpl;
+import javassist.bytecode.annotation.CtAnnotation;
 import javassist.compiler.AccessorMaker;
 import javassist.compiler.CompileError;
 import javassist.compiler.Javac;
@@ -66,11 +68,11 @@ class CtClassType extends CtClass {
     ClassFile classfile;
     byte[] rawClassfile;    // backup storage
 
-    private WeakReference memberCache;
+    private WeakReference<Cache> memberCache;
     private AccessorMaker accessors;
 
     private FieldInitLink fieldInitializers;
-    private Hashtable hiddenMethods;    // must be synchronous
+    private ConcurrentHashMap<CtMethod, String> hiddenMethods;    // must be synchronous
     private int uniqueNumberSeed;
 
     private boolean doPruning = ClassPool.doPruning;
@@ -194,33 +196,17 @@ class CtClassType extends CtClass {
             }
         }
 
-        InputStream fin = null;
-        try {
-            fin = classPool.openClassfile(getName());
-            if (fin == null)
-                throw new NotFoundException(getName());
-
-            fin = new BufferedInputStream(fin);
-            ClassFile cf = new ClassFile(new DataInputStream(fin));
+        try (DataInputStream fin = new DataInputStream(new BufferedInputStream(classPool.openClassfile(getName())))) {
+            ClassFile cf = new ClassFile(fin);
             if (!cf.getName().equals(qualifiedName))
-                throw new RuntimeException("cannot find " + qualifiedName + ": " 
-                        + cf.getName() + " found in "
-                        + qualifiedName.replace('.', '/') + ".class");
-
+                throw new RuntimeException(new StringBuilder("Cannot find ").append(qualifiedName).append(": ") 
+                        .append(cf.getName()).append(" found in ")
+                        .append(qualifiedName.replace('.', '/')).append(".class").toString());
             return setClassFile(cf);
-        }
-        catch (NotFoundException e) {
+        } catch (NotFoundException e) {
             throw new RuntimeException(e.toString(), e);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e.toString(), e);
-        }
-        finally {
-            if (fin != null)
-                try {
-                    fin.close();
-                }
-                catch (IOException e) {}
         }
     }
 
@@ -438,7 +424,7 @@ class CtClassType extends CtClass {
 
         String thisName = cf.getName() + "$";
         int n = ica.tableLength();
-        ArrayList list = new ArrayList(n);
+        ArrayList<CtClass> list = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
             String name = ica.innerClass(i);
             if (name != null)
@@ -449,7 +435,7 @@ class CtClassType extends CtClass {
                 }
         }
 
-        return (CtClass[])list.toArray(new CtClass[list.size()]);
+        return list.toArray(new CtClass[list.size()]);
     }
 
     public void setModifiers(int mod) {
@@ -479,18 +465,16 @@ class CtClassType extends CtClass {
     /**
      * @deprecated
      */
-    static boolean hasAnnotationType(Class clz, ClassPool cp,
+    static boolean hasAnnotationType(Class<?> clz, ClassPool cp,
                                      AnnotationsAttribute a1,
-                                     AnnotationsAttribute a2)
-    {
+                                     AnnotationsAttribute a2) {
         return hasAnnotationType(clz.getName(), cp, a1, a2);
     }
 
     static boolean hasAnnotationType(String annotationTypeName, ClassPool cp,
                                      AnnotationsAttribute a1,
-                                     AnnotationsAttribute a2)
-    {
-        Annotation[] anno1, anno2;
+                                     AnnotationsAttribute a2) {
+        CtAnnotation[] anno1, anno2;
 
         if (a1 == null)
             anno1 = null;
@@ -515,7 +499,8 @@ class CtClassType extends CtClass {
         return false;
     }
 
-    public Object getAnnotation(Class clz) throws ClassNotFoundException {
+    @Override
+    public <A extends Annotation> A getAnnotation(Class<A> clz) throws ClassNotFoundException {
         ClassFile cf = getClassFile2();
         AnnotationsAttribute ainfo = (AnnotationsAttribute)
                 cf.getAttribute(AnnotationsAttribute.invisibleTag);  
@@ -524,11 +509,10 @@ class CtClassType extends CtClass {
         return getAnnotationType(clz, getClassPool(), ainfo, ainfo2);
     }
 
-    static Object getAnnotationType(Class clz, ClassPool cp,
+    static <A extends Annotation> A getAnnotationType(Class<A> clz, ClassPool cp,
                                     AnnotationsAttribute a1, AnnotationsAttribute a2)
-        throws ClassNotFoundException
-    {
-        Annotation[] anno1, anno2;
+        throws ClassNotFoundException {
+        CtAnnotation[] anno1, anno2;
 
         if (a1 == null)
             anno1 = null;
@@ -582,7 +566,7 @@ class CtClassType extends CtClass {
                              AnnotationsAttribute a1, AnnotationsAttribute a2)
         throws ClassNotFoundException
     {
-        Annotation[] anno1, anno2;
+        CtAnnotation[] anno1, anno2;
         int size1, size2;
 
         if (a1 == null) {
@@ -614,7 +598,7 @@ class CtClassType extends CtClass {
            return result;
         }
         else{
-           ArrayList annotations = new ArrayList();
+           ArrayList<Object> annotations = new ArrayList<>();
            for (int i = 0 ; i < size1 ; i++){
               try{
                  annotations.add(toAnnoType(anno1[i], cp));
@@ -648,7 +632,7 @@ class CtClassType extends CtClass {
 
         Object[][] result = new Object[numParameters][];
         for (int i = 0; i < numParameters; i++) {
-            Annotation[] anno1, anno2;
+            CtAnnotation[] anno1, anno2;
             int size1, size2;
 
             if (a1 == null) {
@@ -678,7 +662,7 @@ class CtClassType extends CtClass {
                     result[i][j + size1] = toAnnoType(anno2[j], cp);
             }
             else{
-                ArrayList annotations = new ArrayList();
+                ArrayList<Object> annotations = new ArrayList<>();
                 for (int j = 0 ; j < size1 ; j++){
                     try{
                         annotations.add(toAnnoType(anno1[j], cp));
@@ -699,31 +683,25 @@ class CtClassType extends CtClass {
         return result;
     }
 
-    private static Object toAnnoType(Annotation anno, ClassPool cp)
-        throws ClassNotFoundException
-    {
-        try {
-            ClassLoader cl = cp.getClassLoader();
-            return anno.toAnnotationType(cl, cp);
-        }
-        catch (ClassNotFoundException e) {
-            ClassLoader cl2 = cp.getClass().getClassLoader();
-            try {
-                return anno.toAnnotationType(cl2, cp);
-            }
-            catch (ClassNotFoundException e2){
-                try {
-                    Class clazz = cp.get(anno.getTypeName()).toClass();
-                    return javassist.bytecode.annotation.AnnotationImpl.make(
-                                            clazz.getClassLoader(),
-                                            clazz, cp, anno);
-                }
-                catch (Throwable e3) {
-                    throw new ClassNotFoundException(anno.getTypeName());
-                }
-            }
-        }
-    }
+	private static <A extends Annotation> A toAnnoType(CtAnnotation anno, ClassPool cp) throws ClassNotFoundException {
+		try {
+			ClassLoader cl = cp.getClassLoader();
+			return anno.toAnnotationType(cl, cp);
+		} catch (ClassNotFoundException e) {
+			ClassLoader cl2 = cp.getClass().getClassLoader();
+			try {
+				return anno.toAnnotationType(cl2, cp);
+			} catch (ClassNotFoundException e2) {
+				try {
+					@SuppressWarnings("unchecked")
+					Class<A> clazz = (Class<A>) cp.get(anno.getTypeName()).toClass();
+					return AnnotationImpl.make(clazz.getClassLoader(), clazz, cp, anno);
+				} catch (Throwable e3) {
+					throw new ClassNotFoundException(anno.getTypeName());
+				}
+			}
+		}
+	}
 
     public boolean subclassOf(CtClass superclass) {
         if (superclass == null)
@@ -876,9 +854,9 @@ class CtClassType extends CtClass {
      * Returns null if members are not cached.
      */
     protected CtMember.Cache hasMemberCache() {
-        WeakReference cache = memberCache;
+        WeakReference<CtMember.Cache> cache = memberCache;
         if (cache != null)
-            return (CtMember.Cache)cache.get();
+            return cache.get();
         else
             return null;
     }
@@ -886,65 +864,47 @@ class CtClassType extends CtClass {
     protected synchronized CtMember.Cache getMembers() {
         CtMember.Cache cache = null;
         if (memberCache == null
-            || (cache = (CtMember.Cache)memberCache.get()) == null) {
+            || (cache = memberCache.get()) == null) {
             cache = new CtMember.Cache(this);
             makeFieldCache(cache);
             makeBehaviorCache(cache);
-            memberCache = new WeakReference(cache);
+            memberCache = new WeakReference<>(cache);
         }
 
         return cache;
     }
 
     private void makeFieldCache(CtMember.Cache cache) {
-        List list = getClassFile3(false).getFields();
-        int n = list.size();
-        for (int i = 0; i < n; ++i) {
-            FieldInfo finfo = (FieldInfo)list.get(i);
-            CtField newField = new CtField(finfo, this);
-            cache.addField(newField);
-        }
+        for (FieldInfo finfo : getClassFile3(false).getFields())
+            cache.addField(new CtField(finfo, this));
     }
 
     private void makeBehaviorCache(CtMember.Cache cache) {
-        List list = getClassFile3(false).getMethods();
-        int n = list.size();
-        for (int i = 0; i < n; ++i) {
-            MethodInfo minfo = (MethodInfo)list.get(i);
-            if (minfo.isMethod()) {
-                CtMethod newMethod = new CtMethod(minfo, this);
-                cache.addMethod(newMethod);
-            }
-            else {
-                CtConstructor newCons = new CtConstructor(minfo, this);
-                cache.addConstructor(newCons);
-            }
-        }
+        for (MethodInfo minfo : getClassFile3(false).getMethods())
+            if (minfo.isMethod())
+                cache.addMethod(new CtMethod(minfo, this));
+            else
+                cache.addConstructor(new CtConstructor(minfo, this));
     }
 
     public CtField[] getFields() {
-        ArrayList alist = new ArrayList();
+        ArrayList<CtMember> alist = new ArrayList<>();
         getFields(alist, this);
-        return (CtField[])alist.toArray(new CtField[alist.size()]);
+        return alist.toArray(new CtField[alist.size()]);
     }
 
-    private static void getFields(ArrayList alist, CtClass cc) {
-        int i, num;
+    private static void getFields(ArrayList<CtMember> alist, CtClass cc) {
         if (cc == null)
             return;
 
         try {
             getFields(alist, cc.getSuperclass());
-        }
-        catch (NotFoundException e) {}
+        } catch (NotFoundException e) {}
 
         try {
-            CtClass[] ifs = cc.getInterfaces();
-            num = ifs.length;
-            for (i = 0; i < num; ++i)
-                getFields(alist, ifs[i]);
-        }
-        catch (NotFoundException e) {}
+        	for (CtClass iface : cc.getInterfaces())
+        		getFields(alist, iface);
+        } catch (NotFoundException e) {}
 
         CtMember.Cache memCache = ((CtClassType)cc).getMembers();
         CtMember field = memCache.fieldHead();
@@ -961,19 +921,16 @@ class CtClassType extends CtClass {
         return checkGetField(f, name, desc);
     }
 
-    private CtField checkGetField(CtField f, String name, String desc)
-        throws NotFoundException
-    {
-        if (f == null) {
-            String msg = "field: " + name;
-            if (desc != null)
-                msg += " type " + desc;
-
-            throw new NotFoundException(msg + " in " + getName());
-        }
-        else
-            return f;
-    }
+	private CtField checkGetField(CtField f, String name, String desc) throws NotFoundException {
+		if (f == null) {
+			String msg = "field: " + name;
+			if (desc != null)
+				msg += " type " + desc;
+			
+			throw new NotFoundException(msg + " in " + getName());
+		}
+		return f;
+	}
 
     CtField getField2(String name, String desc) {
         CtField df = getDeclaredField2(name, desc);
@@ -1151,12 +1108,12 @@ class CtClassType extends CtClass {
     }
 
     public CtMethod[] getMethods() {
-        HashMap h = new HashMap();
+        HashMap<String, CtMember> h = new HashMap<>();
         getMethods0(h, this);
-        return (CtMethod[])h.values().toArray(new CtMethod[h.size()]);
+        return h.values().toArray(new CtMethod[h.size()]);
     }
 
-    private static void getMethods0(HashMap h, CtClass cc) {
+    private static void getMethods0(HashMap<String, CtMember> h, CtClass cc) {
         try {
             CtClass[] ifs = cc.getInterfaces();
             int size = ifs.length;
@@ -1253,14 +1210,14 @@ class CtClassType extends CtClass {
         CtMember.Cache memCache = getMembers();
         CtMember mth = memCache.methodHead();
         CtMember mthTail = memCache.lastMethod();
-        ArrayList methods = new ArrayList();
+        ArrayList<CtMethod> methods = new ArrayList<>();
         while (mth != mthTail) {
             mth = mth.next();
             if (mth.getName().equals(name))
                 methods.add((CtMethod)mth);
         }
 
-        return (CtMethod[]) methods.toArray(new CtMethod[methods.size()]);
+        return methods.toArray(new CtMethod[methods.size()]);
     }
 
     public CtMethod getDeclaredMethod(String name) throws NotFoundException {
@@ -1438,52 +1395,40 @@ class CtClassType extends CtClass {
         cf.addAttribute(new AttributeInfo(cf.getConstPool(), name, data));
     }
 
-    public void instrument(CodeConverter converter)
-        throws CannotCompileException
-    {
-        checkModify();
-        ClassFile cf = getClassFile2();
-        ConstPool cp = cf.getConstPool();
-        List list = cf.getMethods();
-        int n = list.size();
-        for (int i = 0; i < n; ++i) {
-            MethodInfo minfo = (MethodInfo)list.get(i);
-            converter.doit(this, minfo, cp);
-        }
-    }
+	public void instrument(CodeConverter converter) throws CannotCompileException {
+		checkModify();
+		ClassFile cf = getClassFile2();
+		ConstPool cp = cf.getConstPool();
+		for (MethodInfo minfo : cf.getMethods())
+			converter.doit(this, minfo, cp);
+	}
+	
+	public void instrument(ExprEditor editor) throws CannotCompileException {
+		checkModify();
+		ClassFile cf = getClassFile2();
+		for (MethodInfo minfo : cf.getMethods())
+			editor.doit(this, minfo);
+	}
 
-    public void instrument(ExprEditor editor)
-        throws CannotCompileException
-    {
-        checkModify();
-        ClassFile cf = getClassFile2();
-        List list = cf.getMethods();
-        int n = list.size();
-        for (int i = 0; i < n; ++i) {
-            MethodInfo minfo = (MethodInfo)list.get(i);
-            editor.doit(this, minfo);
-        }
-    }
-
-    /**
-     * @see javassist.CtClass#prune()
-     * @see javassist.CtClass#stopPruning(boolean)
-     */
-    public void prune() {
-        if (wasPruned)
-            return;
-
-        wasPruned = wasFrozen = true;
-        getClassFile2().prune();
-    }
-
-    public void rebuildClassFile() { gcConstPool = true; }
-
-    public void toBytecode(DataOutputStream out)
-        throws CannotCompileException, IOException
-    {
-        try {
-            if (isModified()) {
+	/**
+	 * @see javassist.CtClass#prune()
+	 * @see javassist.CtClass#stopPruning(boolean)
+	 */
+	public void prune() {
+		if (wasPruned)
+			return;
+		
+		wasPruned = wasFrozen = true;
+		getClassFile2().prune();
+	}
+	
+	public void rebuildClassFile() {
+		gcConstPool = true;
+	}
+	
+	public void toBytecode(DataOutputStream out) throws CannotCompileException, IOException {
+		try {
+			if (isModified()) {
                 checkPruned("toBytecode");
                 ClassFile cf = getClassFile2();
                 if (gcConstPool) {
@@ -1523,12 +1468,8 @@ class CtClassType extends CtClass {
     }
 
     private void dumpClassFile(ClassFile cf) throws IOException {
-        DataOutputStream dump = makeFileOutput(debugDump);
-        try {
+        try (DataOutputStream dump = makeFileOutput(debugDump)) {
             cf.write(dump);
-        }
-        finally {
-            dump.close();
         }
     }
 
@@ -1536,8 +1477,7 @@ class CtClassType extends CtClass {
      */
     private void checkPruned(String method) {
         if (wasPruned)
-            throw new RuntimeException(method + "(): " + getName()
-                                       + " was pruned.");
+            throw new RuntimeException(method + "(): " + getName() + " was pruned.");
     }
 
     public boolean stopPruning(boolean stop) {
@@ -1617,172 +1557,146 @@ class CtClassType extends CtClass {
             throw new CannotCompileException(e);
         }
     }
+	
+	private void modifyConstructors(ClassFile cf) throws CannotCompileException, NotFoundException {
+		if (fieldInitializers == null)
+			return;
+		
+		ConstPool cp = cf.getConstPool();
+		for (MethodInfo minfo : cf.getMethods()) {
+			if (minfo.isConstructor()) {
+				CodeAttribute codeAttr = minfo.getCodeAttribute();
+				if (codeAttr != null)
+					try {
+						Bytecode init = new Bytecode(cp, 0, codeAttr.getMaxLocals());
+						CtClass[] params = Descriptor.getParameterTypes(minfo.getDescriptor(), classPool);
+						int stacksize = makeFieldInitializer(init, params);
+						insertAuxInitializer(codeAttr, init, stacksize);
+						minfo.rebuildStackMapIf6(classPool, cf);
+					} catch (BadBytecode e) {
+						throw new CannotCompileException(e);
+					}
+			}
+		}
+	}
+	
+	private static void insertAuxInitializer(CodeAttribute codeAttr, Bytecode initializer, int stacksize)
+			throws BadBytecode {
+		CodeIterator it = codeAttr.iterator();
+		int index = it.skipSuperConstructor();
+		if (index < 0) {
+			index = it.skipThisConstructor();
+			if (index >= 0)
+				return; // this() is called.
+				
+			// Neither this() or super() is called.
+		}
+		
+		int pos = it.insertEx(initializer.get());
+		it.insert(initializer.getExceptionTable(), pos);
+		int maxstack = codeAttr.getMaxStack();
+		if (maxstack < stacksize)
+			codeAttr.setMaxStack(stacksize);
+	}
+	
+	private int makeFieldInitializer(Bytecode code, CtClass[] parameters)
+			throws CannotCompileException, NotFoundException {
+		int stacksize = 0;
+		Javac jv = new Javac(code, this);
+		try {
+			jv.recordParams(parameters, false);
+		} catch (CompileError e) {
+			throw new CannotCompileException(e);
+		}
+		
+		for (FieldInitLink fi = fieldInitializers; fi != null; fi = fi.next) {
+			CtField f = fi.field;
+			if (!Modifier.isStatic(f.getModifiers())) {
+				int s = fi.init.compile(f.getType(), f.getName(), code, parameters, jv);
+				if (stacksize < s)
+					stacksize = s;
+			}
+		}
+		
+		return stacksize;
+	}
 
-    private void modifyConstructors(ClassFile cf)
-        throws CannotCompileException, NotFoundException
-    {
-        if (fieldInitializers == null)
-            return;
+	// Methods used by CtNewWrappedMethod
+	
+	ConcurrentHashMap<CtMethod, String> getHiddenMethods() {
+		if (hiddenMethods == null)
+			hiddenMethods = new ConcurrentHashMap<>();
+		
+		return hiddenMethods;
+	}
+	
+	int getUniqueNumber() {
+		return uniqueNumberSeed++;
+	}
+	
+	public String makeUniqueName(String prefix) {
+		HashMap<String, CtClassType> table = new HashMap<>();
+		makeMemberList(table);
+		Set<String> keys = table.keySet();
+		String[] methods = new String[keys.size()];
+		keys.toArray(methods);
+		
+		if (notFindInArray(prefix, methods))
+			return prefix;
+		
+		int i = 100;
+		String name;
+		do {
+			if (i > 999)
+				throw new RuntimeException("too many unique name");
+			
+			name = prefix + i++;
+		} while (!notFindInArray(name, methods));
+		return name;
+	}
 
-        ConstPool cp = cf.getConstPool();
-        List list = cf.getMethods();
-        int n = list.size();
-        for (int i = 0; i < n; ++i) {
-            MethodInfo minfo = (MethodInfo)list.get(i);
-            if (minfo.isConstructor()) {
-                CodeAttribute codeAttr = minfo.getCodeAttribute();
-                if (codeAttr != null)
-                    try {
-                        Bytecode init = new Bytecode(cp, 0,
-                                                codeAttr.getMaxLocals());
-                        CtClass[] params
-                            = Descriptor.getParameterTypes(
-                                                minfo.getDescriptor(),
-                                                classPool);
-                        int stacksize = makeFieldInitializer(init, params);
-                        insertAuxInitializer(codeAttr, init, stacksize);
-                        minfo.rebuildStackMapIf6(classPool, cf);
-                    }
-                    catch (BadBytecode e) {
-                        throw new CannotCompileException(e);
-                    }
-            }
-        }
-    }
-
-    private static void insertAuxInitializer(CodeAttribute codeAttr,
-                                             Bytecode initializer,
-                                             int stacksize)
-        throws BadBytecode
-    {
-        CodeIterator it = codeAttr.iterator();
-        int index = it.skipSuperConstructor();
-        if (index < 0) {
-            index = it.skipThisConstructor();
-            if (index >= 0)
-                return;         // this() is called.
-
-            // Neither this() or super() is called.
-        }
-
-        int pos = it.insertEx(initializer.get());
-        it.insert(initializer.getExceptionTable(), pos);
-        int maxstack = codeAttr.getMaxStack();
-        if (maxstack < stacksize)
-            codeAttr.setMaxStack(stacksize);
-    }
-
-    private int makeFieldInitializer(Bytecode code, CtClass[] parameters)
-        throws CannotCompileException, NotFoundException
-    {
-        int stacksize = 0;
-        Javac jv = new Javac(code, this);
-        try {
-            jv.recordParams(parameters, false);
-        }
-        catch (CompileError e) {
-            throw new CannotCompileException(e);
-        }
-
-        for (FieldInitLink fi = fieldInitializers; fi != null; fi = fi.next) {
-            CtField f = fi.field;
-            if (!Modifier.isStatic(f.getModifiers())) {
-                int s = fi.init.compile(f.getType(), f.getName(), code,
-                                        parameters, jv);
-                if (stacksize < s)
-                    stacksize = s;
-            }
-        }
-
-        return stacksize;
-    }
-
-    // Methods used by CtNewWrappedMethod
-
-    Hashtable getHiddenMethods() {
-        if (hiddenMethods == null)
-            hiddenMethods = new Hashtable();
-
-        return hiddenMethods;
-    }
-
-    int getUniqueNumber() { return uniqueNumberSeed++; }
-
-    public String makeUniqueName(String prefix) {
-        HashMap table = new HashMap();
-        makeMemberList(table);
-        Set keys = table.keySet();
-        String[] methods = new String[keys.size()];
-        keys.toArray(methods);
-
-        if (notFindInArray(prefix, methods))
-            return prefix;
-
-        int i = 100;
-        String name;
-        do {
-            if (i > 999)
-                throw new RuntimeException("too many unique name");
-
-            name = prefix + i++;
-        } while (!notFindInArray(name, methods));
-        return name;
-    }
-
-    private static boolean notFindInArray(String prefix, String[] values) {
-        int len = values.length;
-        for (int i = 0; i < len; i++)
-            if (values[i].startsWith(prefix))
-                return false;
-
-        return true;
-    }
-
-    private void makeMemberList(HashMap table) {
-        int mod = getModifiers();
-        if (Modifier.isAbstract(mod) || Modifier.isInterface(mod))
-            try {
-                CtClass[] ifs = getInterfaces();
-                int size = ifs.length;
-                for (int i = 0; i < size; i++) {
-                    CtClass ic =ifs[i];
-                    if (ic != null && ic instanceof CtClassType)
-                        ((CtClassType)ic).makeMemberList(table);
-                }
-            }
-            catch (NotFoundException e) {}
-
-        try {
-            CtClass s = getSuperclass();
-            if (s != null && s instanceof CtClassType)
-                ((CtClassType)s).makeMemberList(table);
-        }
-        catch (NotFoundException e) {}
-
-        List list = getClassFile2().getMethods();
-        int n = list.size();
-        for (int i = 0; i < n; i++) {
-            MethodInfo minfo = (MethodInfo)list.get(i);
-            table.put(minfo.getName(), this);
-        }
-
-        list = getClassFile2().getFields();
-        n = list.size();
-        for (int i = 0; i < n; i++) {
-            FieldInfo finfo = (FieldInfo)list.get(i);
-            table.put(finfo.getName(), this);
-        }
-    }
+	private static boolean notFindInArray(String prefix, String[] values) {
+		int len = values.length;
+		for (int i = 0; i < len; i++)
+			if (values[i].startsWith(prefix))
+				return false;
+		
+		return true;
+	}
+	
+	private void makeMemberList(HashMap<String, CtClassType> table) {
+		int mod = getModifiers();
+		if (Modifier.isAbstract(mod) || Modifier.isInterface(mod))
+			try {
+				for (CtClass ic : getInterfaces())
+					if (ic != null && ic instanceof CtClassType)
+						((CtClassType) ic).makeMemberList(table);
+			} catch (NotFoundException e) {
+			}
+		
+		try {
+			CtClass s = getSuperclass();
+			if (s != null && s instanceof CtClassType)
+				((CtClassType) s).makeMemberList(table);
+		} catch (NotFoundException e) {
+		}
+		
+		for (MethodInfo minfo : getClassFile2().getMethods())
+			table.put(minfo.getName(), this);
+		
+		for (FieldInfo finfo : getClassFile2().getFields())
+			table.put(finfo.getName(), this);
+	}
 }
 
 class FieldInitLink {
-    FieldInitLink next;
-    CtField field;
-    CtField.Initializer init;
-
-    FieldInitLink(CtField f, CtField.Initializer i) {
-        next = null;
-        field = f;
-        init = i;
-    }
+	FieldInitLink next;
+	CtField field;
+	CtField.Initializer init;
+	
+	FieldInitLink(CtField f, CtField.Initializer i) {
+		next = null;
+		field = f;
+		init = i;
+	}
 }

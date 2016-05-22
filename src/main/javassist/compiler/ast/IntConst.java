@@ -23,7 +23,8 @@ import javassist.compiler.TokenId;
  * Integer constant.
  */
 public class IntConst extends ASTree {
-    protected long value;
+	private static final long serialVersionUID = 8467565945324056444L;
+	protected long value;
     protected int type;
 
     public IntConst(long v, int tokenId) { value = v; type = tokenId; }

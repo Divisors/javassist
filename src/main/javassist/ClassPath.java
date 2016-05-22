@@ -16,6 +16,7 @@
 
 package javassist;
 
+import java.io.Closeable;
 import java.io.InputStream;
 import java.net.URL;
 
@@ -31,7 +32,7 @@ import java.net.URL;
  * @see ClassPool#appendClassPath(ClassPath)
  * @see ClassPool#removeClassPath(ClassPath)
  */
-public interface ClassPath {
+public interface ClassPath extends Closeable{
     /**
      * Opens a class file.
      * This method may be called just to examine whether the class file
@@ -64,5 +65,6 @@ public interface ClassPath {
      * detached from the search path.  It will be an empty method in most of
      * classes.
      */
+    @Override
     void close();
 }

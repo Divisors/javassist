@@ -111,7 +111,7 @@ public class LocalVariableAttribute extends AttributeInfo {
         return Descriptor.rename(desc, oldname, newname);
     }
 
-    void renameClass(Map classnames) {
+    void renameClass(Map<String, String> classnames) {
         ConstPool cp = getConstPool();
         int n = tableLength();
         for (int i = 0; i < n; ++i) {
@@ -125,7 +125,7 @@ public class LocalVariableAttribute extends AttributeInfo {
         }
     }
 
-    String renameEntry(String desc, Map classnames) {
+    String renameEntry(String desc, Map<String, String> classnames) {
         return Descriptor.rename(desc, classnames);
     }
 
@@ -291,7 +291,7 @@ public class LocalVariableAttribute extends AttributeInfo {
      * @param newCp     the constant pool table used by the new copy.
      * @param classnames        should be null.
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
+    public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
         byte[] src = get();
         byte[] dest = new byte[src.length];
         ConstPool cp = getConstPool();

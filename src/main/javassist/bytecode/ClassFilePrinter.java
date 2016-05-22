@@ -37,51 +37,47 @@ public class ClassFilePrinter {
      * Prints the contents of a class file.
      */
     public static void print(ClassFile cf, PrintWriter out) {
-        List list;
-        int n;
-
         /* 0x0020 (SYNCHRONIZED) means ACC_SUPER if the modifiers
          * are of a class.
          */
-        int mod
-            = AccessFlag.toModifier(cf.getAccessFlags()
-                                    & ~AccessFlag.SYNCHRONIZED);
-        out.println("major: " + cf.major + ", minor: " + cf.minor
-                    + " modifiers: " + Integer.toHexString(cf.getAccessFlags()));
-        out.println(Modifier.toString(mod) + " class "
-                    + cf.getName() + " extends " + cf.getSuperclass());
+		int mod = AccessFlag.toModifier(cf.getAccessFlags() & ~AccessFlag.SYNCHRONIZED);
+        out.println(new StringBuffer(80)
+        		.append("major: ").append(cf.major)
+        		.append(", minor: ").append(cf.minor)
+        		.append(" modifiers: ").append(Integer.toHexString(cf.getAccessFlags()))
+        		.append(System.getProperty("line.separator"))
+        		.append(Modifier.toString(mod))
+        		.append(" class ").append(cf.getName())
+        		.append(" extends ").append(cf.getSuperclass())
+        		.toString());
 
-        String[] infs = cf.getInterfaces();
-        if (infs != null && infs.length > 0) {
-            out.print("    implements ");
-            out.print(infs[0]);
-            for (int i = 1; i < infs.length; ++i)
-                out.print(", " + infs[i]);
-
-            out.println();
-        }
-
-        out.println();
-        list = cf.getFields();
-        n = list.size();
-        for (int i = 0; i < n; ++i) {
-            FieldInfo finfo = (FieldInfo)list.get(i);
+		String[] infs = cf.getInterfaces();
+		if (infs != null && infs.length > 0) {
+			out.print("    implements ");
+			StringBuilder sb = new StringBuilder(infs[0]);
+			for (int i = 1, n = infs.length; i < n; ++i)
+				sb.append(", ").append(infs[i]);
+			
+			out.println(sb.toString());
+		}
+		out.println();
+        
+        for (FieldInfo finfo : cf.getFields()) {
             int acc = finfo.getAccessFlags();
-            out.println(Modifier.toString(AccessFlag.toModifier(acc))
-                        + " " + finfo.getName() + "\t"
-                        + finfo.getDescriptor());
+            out.println(new StringBuffer(Modifier.toString(AccessFlag.toModifier(acc)))
+            		.append(' ').append(finfo.getName())
+            		.append('\t').append(finfo.getDescriptor())
+            		.toString());
             printAttributes(finfo.getAttributes(), out, 'f');
         }
-
         out.println();
-        list = cf.getMethods();
-        n = list.size();
-        for (int i = 0; i < n; ++i) {
-            MethodInfo minfo = (MethodInfo)list.get(i);
+        
+        for (MethodInfo minfo : cf.getMethods()) {
             int acc = minfo.getAccessFlags();
-            out.println(Modifier.toString(AccessFlag.toModifier(acc))
-                        + " " + minfo.getName() + "\t"
-                        + minfo.getDescriptor());
+            out.println(new StringBuffer(Modifier.toString(AccessFlag.toModifier(acc)))
+            		.append(' ').append(minfo.getName())
+            		.append('\t').append(minfo.getDescriptor())
+            		.toString());
             printAttributes(minfo.getAttributes(), out, 'm');
             out.println();
         }
@@ -90,13 +86,11 @@ public class ClassFilePrinter {
         printAttributes(cf.getAttributes(), out, 'c');
     }
 
-    static void printAttributes(List list, PrintWriter out, char kind) {
+    static void printAttributes(List<AttributeInfo> list, PrintWriter out, char kind) {
         if (list == null)
             return;
 
-        int n = list.size();
-        for (int i = 0; i < n; ++i) {
-            AttributeInfo ai = (AttributeInfo)list.get(i);
+        for (AttributeInfo ai : list) {
             if (ai instanceof CodeAttribute) {
                 CodeAttribute ca = (CodeAttribute)ai;
                 out.println("attribute: " + ai.getName() + ": "
@@ -108,24 +102,19 @@ public class ClassFilePrinter {
                 out.println("<code attribute begin>");
                 printAttributes(ca.getAttributes(), out, kind);
                 out.println("<code attribute end>");
-            }
-            else if (ai instanceof AnnotationsAttribute) {
-                out.println("annnotation: " + ai.toString());
-            }
-            else if (ai instanceof ParameterAnnotationsAttribute) {
-                out.println("parameter annnotations: " + ai.toString());
-            }
-            else if (ai instanceof StackMapTable) {
-                out.println("<stack map table begin>");
-                StackMapTable.Printer.print((StackMapTable)ai, out);
-                out.println("<stack map table end>");
-            }
-            else if (ai instanceof StackMap) {
+			} else if (ai instanceof AnnotationsAttribute) {
+				out.println("annnotation: " + ai.toString());
+			} else if (ai instanceof ParameterAnnotationsAttribute) {
+				out.println("parameter annnotations: " + ai.toString());
+			} else if (ai instanceof StackMapTable) {
+				out.println("<stack map table begin>");
+				StackMapTable.Printer.print((StackMapTable) ai, out);
+				out.println("<stack map table end>");
+			} else if (ai instanceof StackMap) {
                 out.println("<stack map begin>");
                 ((StackMap)ai).print(out);
                 out.println("<stack map end>");
-            }
-            else if (ai instanceof SignatureAttribute) {
+            } else if (ai instanceof SignatureAttribute) {
                 SignatureAttribute sa = (SignatureAttribute)ai;
                 String sig = sa.getSignature();
                 out.println("signature: " + sig);
@@ -139,15 +128,16 @@ public class ClassFilePrinter {
                         s = SignatureAttribute.toFieldSignature(sig).toString();
 
                     out.println("           " + s);
-                }
-                catch (BadBytecode e) {
-                    out.println("           syntax error");
-                }
+				} catch (BadBytecode e) {
+					out.println("           syntax error");
+				}
             }
             else
-                out.println("attribute: " + ai.getName()
-                            + " (" + ai.get().length + " byte): "
-                            + ai.getClass().getName());
+				out.println(new StringBuilder(60)
+						.append("attribute: ").append(ai.getName()) 
+						.append(" (").append(ai.get().length).append(" byte): ")
+						.append(ai.getClass().getName())
+						.toString());
         }
     }
 }

@@ -16,12 +16,11 @@
 
 package javassist.util.proxy;
 
-import java.io.Serializable;
 import java.io.ObjectStreamException;
+import java.io.Serializable;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.security.ProtectionDomain;
 
 /**
  * A proxy object is converted into an instance of this class
@@ -30,16 +29,18 @@ import java.security.ProtectionDomain;
  * @see RuntimeSupport#makeSerializedProxy(Object)
  */
 class SerializedProxy implements Serializable {
-    private String superClass;
+	private static final long serialVersionUID = -2214079411428425236L;
+	
+	private String superClass;
     private String[] interfaces;
     private byte[] filterSignature;
     private MethodHandler handler;
 
-    SerializedProxy(Class proxy, byte[] sig, MethodHandler h) {
+    SerializedProxy(Class<?> proxy, byte[] sig, MethodHandler h) {
         filterSignature = sig;
         handler = h;
         superClass = proxy.getSuperclass().getName();
-        Class[] infs = proxy.getInterfaces();
+        Class<?>[] infs = proxy.getInterfaces();
         int n = infs.length;
         interfaces = new String[n - 1];
         String setterInf = ProxyObject.class.getName();
@@ -58,28 +59,26 @@ class SerializedProxy implements Serializable {
      * @return loaded class
      * @throws ClassNotFoundException for any error
      */
-    protected Class loadClass(final String className) throws ClassNotFoundException {
-        try {
-            return (Class)AccessController.doPrivileged(new PrivilegedExceptionAction(){
-                public Object run() throws Exception{
-                    ClassLoader cl = Thread.currentThread().getContextClassLoader();
-                    return Class.forName(className, true, cl);
-                }
-            });
-        }
-        catch (PrivilegedActionException pae) {
-            throw new RuntimeException("cannot load the class: " + className, pae.getException());
-        }
+    protected Class<?> loadClass(final String className) throws ClassNotFoundException {
+		try {
+			return AccessController.doPrivileged(new PrivilegedExceptionAction<Class<?>>() {
+				public Class<?> run() throws Exception {
+					return Class.forName(className, true, Thread.currentThread().getContextClassLoader());
+				}
+			});
+		} catch (PrivilegedActionException pae) {
+			throw new RuntimeException("cannot load the class: " + className, pae.getException());
+		}
     }
 
-    Object readResolve() throws ObjectStreamException {
+    Proxy readResolve() throws ObjectStreamException {
         try {
-            int n = interfaces.length;
-            Class[] infs = new Class[n];
+            final int n = interfaces.length;
+            Class<?>[] infs = new Class<?>[n];
             for (int i = 0; i < n; i++)
                 infs[i] = loadClass(interfaces[i]);
 
-            ProxyFactory f = new ProxyFactory();
+            ProxyFactory<?> f = new ProxyFactory<>();
             f.setSuperclass(loadClass(superClass));
             f.setInterfaces(infs);
             Proxy proxy = (Proxy)f.createClass(filterSignature).newInstance();

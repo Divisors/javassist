@@ -64,7 +64,7 @@ public class FloatMemberValue extends MemberValue {
         return new Float(getValue());
     }
 
-    Class getType(ClassLoader cl) {
+    Class<?> getType(ClassLoader cl) {
         return float.class;
     }
 

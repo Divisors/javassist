@@ -23,7 +23,8 @@ import javassist.compiler.CompileError;
  * Variable declarator.
  */
 public class Declarator extends ASTList implements TokenId {
-    protected int varType;
+	private static final long serialVersionUID = 4139932011220178328L;
+	protected int varType;
     protected int arrayDim;
     protected int localVar;
     protected String qualifiedClass;    // JVM-internal representation

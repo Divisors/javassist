@@ -325,8 +325,8 @@ public class JvstTest3 extends JvstTestRoot {
         ConstPool cp = cf.getConstPool();
         AnnotationsAttribute attr
             = new AnnotationsAttribute(cp, AnnotationsAttribute.visibleTag);
-        javassist.bytecode.annotation.Annotation a
-            = new Annotation("test3.ChibaAnnotation", cp);
+        javassist.bytecode.annotation.CtAnnotation a
+            = new CtAnnotation("test3.ChibaAnnotation", cp);
         a.addMemberValue("name", new StringMemberValue("Chiba", cp));
         a.addMemberValue("version", new StringMemberValue("Chiba", cp));
         a.addMemberValue("description", new StringMemberValue("Chiba", cp));

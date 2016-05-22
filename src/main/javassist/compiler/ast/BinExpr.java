@@ -30,7 +30,9 @@ public class BinExpr extends Expr {
      * <<, >>, >>>, +, -, *, /, %
      */
 
-    private BinExpr(int op, ASTree _head, ASTList _tail) {
+	private static final long serialVersionUID = 493705937276265737L;
+
+	private BinExpr(int op, ASTree _head, ASTList _tail) {
         super(op, _head, _tail);
     }
 

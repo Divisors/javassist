@@ -16,13 +16,23 @@
 
 package javassist;
 
-import javassist.bytecode.*;
+import java.lang.annotation.Annotation;
+
+import javassist.bytecode.AccessFlag;
+import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.AttributeInfo;
+import javassist.bytecode.Bytecode;
+import javassist.bytecode.ClassFile;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.Descriptor;
+import javassist.bytecode.FieldInfo;
+import javassist.bytecode.SignatureAttribute;
+import javassist.compiler.CompileError;
 import javassist.compiler.Javac;
 import javassist.compiler.SymbolTable;
-import javassist.compiler.CompileError;
 import javassist.compiler.ast.ASTree;
-import javassist.compiler.ast.IntConst;
 import javassist.compiler.ast.DoubleConst;
+import javassist.compiler.ast.IntConst;
 import javassist.compiler.ast.StringL;
 
 /**
@@ -78,33 +88,23 @@ public class CtField extends CtMember {
      * @see CtNewMethod#setter(String,CtField)
      * @see CtField.Initializer
      */
-    public CtField(CtField src, CtClass declaring)
-        throws CannotCompileException
-    {
-        this(src.fieldInfo.getDescriptor(), src.fieldInfo.getName(),
-             declaring);
-        java.util.ListIterator iterator
-            = src.fieldInfo.getAttributes().listIterator();
-        FieldInfo fi = fieldInfo;
-        fi.setAccessFlags(src.fieldInfo.getAccessFlags());
-        ConstPool cp = fi.getConstPool();
-        while (iterator.hasNext()) {
-            AttributeInfo ainfo = (AttributeInfo)iterator.next();
-            fi.addAttribute(ainfo.copy(cp, null));
-        }
-    }
+	public CtField(CtField src, CtClass declaring) throws CannotCompileException {
+		this(src.fieldInfo.getDescriptor(), src.fieldInfo.getName(), declaring);
+		FieldInfo fi = fieldInfo;
+		fi.setAccessFlags(src.fieldInfo.getAccessFlags());
+		ConstPool cp = fi.getConstPool();
+		for (AttributeInfo ainfo : src.fieldInfo.getAttributes())
+			fi.addAttribute(ainfo.copy(cp, null));
+	}
 
-    private CtField(String typeDesc, String name, CtClass clazz)
-        throws CannotCompileException
-    {
-        super(clazz);
-        ClassFile cf = clazz.getClassFile2();
-        if (cf == null)
-            throw new CannotCompileException("bad declaring class: "
-                                             + clazz.getName());
-
-        fieldInfo = new FieldInfo(cf.getConstPool(), name, typeDesc);
-    }
+	private CtField(String typeDesc, String name, CtClass clazz) throws CannotCompileException {
+		super(clazz);
+		ClassFile cf = clazz.getClassFile2();
+		if (cf == null)
+			throw new CannotCompileException("bad declaring class: " + clazz.getName());
+		
+		fieldInfo = new FieldInfo(cf.getConstPool(), name, typeDesc);
+	}
 
     CtField(FieldInfo fi, CtClass clazz) {
         super(clazz);
@@ -269,7 +269,8 @@ public class CtField extends CtMember {
      * @return the annotation if found, otherwise <code>null</code>.
      * @since 3.11
      */
-    public Object getAnnotation(Class clz) throws ClassNotFoundException {
+    @Override
+    public <A extends Annotation> A getAnnotation(Class<A> clz) throws ClassNotFoundException {
         FieldInfo fi = getFieldInfo2();
         AnnotationsAttribute ainfo = (AnnotationsAttribute)
                     fi.getAttribute(AnnotationsAttribute.invisibleTag);  

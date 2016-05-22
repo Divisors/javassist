@@ -18,6 +18,7 @@ package javassist.bytecode.annotation;
 import javassist.ClassPool;
 import javassist.bytecode.ConstPool;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 /**
@@ -27,7 +28,7 @@ import java.lang.reflect.Method;
  * @author Shigeru Chiba
  */
 public class AnnotationMemberValue extends MemberValue {
-    Annotation value;
+    CtAnnotation value;
 
     /**
      * Constructs an annotation member.  The initial value is not specified.
@@ -40,18 +41,18 @@ public class AnnotationMemberValue extends MemberValue {
      * Constructs an annotation member.  The initial value is specified by
      * the first parameter.
      */
-    public AnnotationMemberValue(Annotation a, ConstPool cp) {
+    public AnnotationMemberValue(CtAnnotation a, ConstPool cp) {
         super('@', cp);
         value = a;
     }
 
-    Object getValue(ClassLoader cl, ClassPool cp, Method m)
-        throws ClassNotFoundException
-    {
-        return AnnotationImpl.make(cl, getType(cl), cp, value);
+    @SuppressWarnings("unchecked")
+    Annotation getValue(ClassLoader cl, ClassPool cp, Method m) throws ClassNotFoundException {
+        return AnnotationImpl.make(cl, (Class<? extends Annotation>) getType(cl), cp, value);
     }
 
-    Class getType(ClassLoader cl) throws ClassNotFoundException {
+    @Override
+    Class<? extends CtAnnotation> getType(ClassLoader cl) throws ClassNotFoundException {
         if (value == null)
             throw new ClassNotFoundException("no type specified");
         else
@@ -61,14 +62,14 @@ public class AnnotationMemberValue extends MemberValue {
     /**
      * Obtains the value.
      */
-    public Annotation getValue() {
+    public CtAnnotation getValue() {
         return value;
     }
 
     /**
      * Sets the value of this member.
      */
-    public void setValue(Annotation newValue) {
+    public void setValue(CtAnnotation newValue) {
         value = newValue;
     }
 

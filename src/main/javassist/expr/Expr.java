@@ -16,6 +16,8 @@
 
 package javassist.expr;
 
+import java.util.LinkedHashSet;
+
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtBehavior;
@@ -35,9 +37,6 @@ import javassist.bytecode.ExceptionsAttribute;
 import javassist.bytecode.MethodInfo;
 import javassist.bytecode.Opcode;
 import javassist.compiler.Javac;
-
-import java.util.Iterator;
-import java.util.LinkedList;
 
 /**
  * Expression.
@@ -132,7 +131,7 @@ public abstract class Expr implements Opcode {
     public CtClass[] mayThrow() {
         ClassPool pool = thisClass.getClassPool();
         ConstPool cp = thisMethod.getConstPool();
-        LinkedList list = new LinkedList();
+        LinkedHashSet<CtClass> set = new LinkedHashSet<>();
         try {
             CodeAttribute ca = thisMethod.getCodeAttribute();
             ExceptionTable et = ca.getExceptionTable();
@@ -143,39 +142,25 @@ public abstract class Expr implements Opcode {
                     int t = et.catchType(i);
                     if (t > 0)
                         try {
-                            addClass(list, pool.get(cp.getClassInfo(t)));
-                        }
-                        catch (NotFoundException e) {
-                        }
+                        	set.add(pool.get(cp.getClassInfo(t)));
+                        } catch (NotFoundException e) {}
                 }
-        }
-        catch (NullPointerException e) {
+        } catch (NullPointerException e) {
         }
 
         ExceptionsAttribute ea = thisMethod.getExceptionsAttribute();
         if (ea != null) {
             String[] exceptions = ea.getExceptions();
             if (exceptions != null) {
-                int n = exceptions.length;
-                for (int i = 0; i < n; ++i)
+                for (int i = 0, n = exceptions.length; i < n; ++i)
                     try {
-                        addClass(list, pool.get(exceptions[i]));
-                    }
-                    catch (NotFoundException e) {
+                    	set.add(pool.get(exceptions[i]));
+                    } catch (NotFoundException e) {
                     }
             }
         }
 
-        return (CtClass[])list.toArray(new CtClass[list.size()]);
-    }
-
-    private static void addClass(LinkedList list, CtClass c) {
-        Iterator it = list.iterator();
-        while (it.hasNext())
-            if (it.next() == c)
-                return;
-
-        list.add(c);
+        return (CtClass[])set.toArray(new CtClass[set.size()]);
     }
 
     /**

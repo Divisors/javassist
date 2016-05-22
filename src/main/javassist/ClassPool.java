@@ -27,10 +27,9 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
-import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javassist.bytecode.ClassFile;
 import javassist.bytecode.Descriptor;
@@ -76,9 +75,9 @@ public class ClassPool {
 
     static {
         try {
-            AccessController.doPrivileged(new PrivilegedExceptionAction(){
+            AccessController.doPrivileged(new PrivilegedExceptionAction<Object>(){
                 public Object run() throws Exception{
-                    Class cl = Class.forName("java.lang.ClassLoader");
+                    Class<?> cl = Class.forName("java.lang.ClassLoader");
                     defineClass1 = cl.getDeclaredMethod("defineClass",
                             new Class[] { String.class, byte[].class,
                                          int.class, int.class });
@@ -146,16 +145,16 @@ public class ClassPool {
 
     protected ClassPoolTail source;
     protected ClassPool parent;
-    protected Hashtable classes;        // should be synchronous
+    protected ConcurrentHashMap<String, CtClass> classes;        // should be synchronous
 
     /**
      * Table of registered cflow variables.
      */
-    private Hashtable cflow = null;     // should be synchronous.
+    private ConcurrentHashMap<String, String[]> cflow = null;     // should be synchronous.
 
     private static final int INIT_HASH_SIZE = 191;
 
-    private ArrayList importedPackages;
+    private ArrayList<String> importedPackages;
 
     /**
      * Creates a root class pool.  No parent class pool is specified.
@@ -187,7 +186,7 @@ public class ClassPool {
      * @see javassist.ClassPool#getDefault()
      */
     public ClassPool(ClassPool parent) {
-        this.classes = new Hashtable(INIT_HASH_SIZE);
+        this.classes = new ConcurrentHashMap<>(INIT_HASH_SIZE);
         this.source = new ClassPoolTail();
         this.parent = parent;
         if (parent == null) {
@@ -244,7 +243,7 @@ public class ClassPool {
      * @see #removeCached(String)
      */
     protected CtClass getCached(String classname) {
-        return (CtClass)classes.get(classname);
+        return classes.get(classname);
     }
 
     /**
@@ -266,7 +265,7 @@ public class ClassPool {
      * @see #cacheCtClass(String,CtClass,boolean)
      */
     protected CtClass removeCached(String classname) {
-        return (CtClass)classes.remove(classname);
+        return classes.remove(classname);
     }
 
     /**
@@ -283,9 +282,8 @@ public class ClassPool {
     void compress() {
         if (compressCount++ > COMPRESS_THRESHOLD) {
             compressCount = 0;
-            Enumeration e = classes.elements();
-            while (e.hasMoreElements())
-                ((CtClass)e.nextElement()).compress();
+            for (CtClass cc : classes.values())
+                cc.compress();
         }
     }
 
@@ -318,7 +316,7 @@ public class ClassPool {
      * @since 3.1
      */
     public void clearImportedPackages() {
-        importedPackages = new ArrayList();
+        importedPackages = new ArrayList<>();
         importedPackages.add("java.lang");
     }
 
@@ -328,7 +326,7 @@ public class ClassPool {
      * @see #importPackage(String)
      * @since 3.1
      */
-    public Iterator getImportedPackages() {
+    public Iterator<String> getImportedPackages() {
         return importedPackages.iterator();
     }
 
@@ -360,9 +358,9 @@ public class ClassPool {
      */
     void recordCflow(String name, String cname, String fname) {
         if (cflow == null)
-            cflow = new Hashtable();
+            cflow = new ConcurrentHashMap<>();
 
-        cflow.put(name, new Object[] { cname, fname });
+        cflow.put(name, new String[] { cname, fname });
     }
 
     /**
@@ -370,11 +368,11 @@ public class ClassPool {
      *
      * @param name      the name of <code>$cflow</code> variable
      */
-    public Object[] lookupCflow(String name) {
+    public String[] lookupCflow(String name) {
         if (cflow == null)
-            cflow = new Hashtable();
+            cflow = new ConcurrentHashMap<>();
 
-        return (Object[])cflow.get(name);
+        return cflow.get(name);
     }
 
     /**
@@ -395,9 +393,7 @@ public class ClassPool {
      * @param orgName   the original (fully-qualified) class name
      * @param newName   the new class name
      */
-    public CtClass getAndRename(String orgName, String newName)
-        throws NotFoundException
-    {
+    public CtClass getAndRename(String orgName, String newName) throws NotFoundException {
         CtClass clazz = get0(orgName, false);
         if (clazz == null)
             throw new NotFoundException(orgName);
@@ -965,7 +961,8 @@ public class ClassPool {
      * @see javassist.ByteArrayClassPath
      */
     public ClassPath appendClassPath(ClassPath cp) {
-        return source.appendClassPath(cp);
+        source.appendClassPath(cp);
+        return cp;
     }
 
     /**
@@ -1065,7 +1062,7 @@ public class ClassPool {
      * @see #toClass(CtClass, java.lang.ClassLoader, ProtectionDomain)
      * @see #getClassLoader()
      */
-    public Class toClass(CtClass clazz) throws CannotCompileException {
+    public Class<?> toClass(CtClass clazz) throws CannotCompileException {
         // Some subclasses of ClassPool may override toClass(CtClass,ClassLoader).
         // So we should call that method instead of toClass(.., ProtectionDomain).
         return toClass(clazz, getClassLoader()); 
@@ -1107,7 +1104,7 @@ public class ClassPool {
      * overriding this method should be modified.  It should override
      * {@link #toClass(CtClass,ClassLoader,ProtectionDomain)}.
      */
-    public Class toClass(CtClass ct, ClassLoader loader)
+    public Class<?> toClass(CtClass ct, ClassLoader loader)
         throws CannotCompileException
     {
         return toClass(ct, loader, null);
@@ -1143,7 +1140,7 @@ public class ClassPool {
      * @see #getClassLoader()
      * @since 3.3
      */
-    public Class toClass(CtClass ct, ClassLoader loader, ProtectionDomain domain)
+    public Class<?> toClass(CtClass ct, ClassLoader loader, ProtectionDomain domain)
         throws CannotCompileException
     {
         try {
@@ -1161,7 +1158,7 @@ public class ClassPool {
                     new Integer(b.length), domain};
             }
 
-            return (Class)toClass2(method, loader, args);
+            return (Class<?>)toClass2(method, loader, args);
         }
         catch (RuntimeException e) {
             throw e;

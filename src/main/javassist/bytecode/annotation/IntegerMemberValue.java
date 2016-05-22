@@ -65,11 +65,11 @@ public class IntegerMemberValue extends MemberValue {
         setValue(0);
     }
 
-    Object getValue(ClassLoader cl, ClassPool cp, Method m) {
-        return new Integer(getValue());
+    Integer getValue(ClassLoader cl, ClassPool cp, Method m) {
+        return getValue();
     }
 
-    Class getType(ClassLoader cl) {
+    Class<?> getType(ClassLoader cl) {
         return int.class;
     }
 

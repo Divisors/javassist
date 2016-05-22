@@ -56,11 +56,11 @@ public class EnumMemberValue extends MemberValue {
         typeIndex = valueIndex = 0;
     }
 
-    Object getValue(ClassLoader cl, ClassPool cp, Method m)
-        throws ClassNotFoundException
-    {
+    @Override
+    Enum<?> getValue(ClassLoader cl, ClassPool cp, Method m)
+        throws ClassNotFoundException {
         try {
-            return getType(cl).getField(getValue()).get(null);
+            return (Enum<?>) getType(cl).getField(getValue()).get(null);
         }
         catch (NoSuchFieldException e) {
             throw new ClassNotFoundException(getType() + "." + getValue());
@@ -70,7 +70,7 @@ public class EnumMemberValue extends MemberValue {
         }
     }
 
-    Class getType(ClassLoader cl) throws ClassNotFoundException {
+    Class<? extends Enum<?>> getType(ClassLoader cl) throws ClassNotFoundException {
         return loadClass(cl, getType());
     }
 

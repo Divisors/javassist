@@ -16,18 +16,17 @@
 
 package javassist.bytecode.annotation;
 
+import java.io.IOException;
+import java.lang.reflect.Method;
+
 import javassist.ClassPool;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.Descriptor;
 
-import java.io.IOException;
-import java.lang.reflect.Array;
-import java.lang.reflect.Method;
-
 /**
  * The value of a member declared in an annotation.
  *
- * @see Annotation#getMemberValue(String)
+ * @see CtAnnotation#getMemberValue(String)
  * @author <a href="mailto:bill@jboss.org">Bill Burke</a>
  * @author Shigeru Chiba
  */
@@ -47,13 +46,12 @@ public abstract class MemberValue {
     abstract Object getValue(ClassLoader cl, ClassPool cp, Method m)
         throws ClassNotFoundException;
 
-    abstract Class getType(ClassLoader cl) throws ClassNotFoundException;
+    abstract Class<?> getType(ClassLoader cl) throws ClassNotFoundException;
 
-    static Class loadClass(ClassLoader cl, String classname)
-        throws ClassNotFoundException, NoSuchClassError
-    {
+    @SuppressWarnings("unchecked")
+	static <T> Class<T> loadClass(ClassLoader cl, String classname) throws ClassNotFoundException, NoSuchClassError {
         try {
-            return Class.forName(convertFromArray(classname), true, cl);
+            return (Class<T>) Class.forName(convertFromArray(classname), true, cl);
         }
         catch (LinkageError e) {
             throw new NoSuchClassError(classname, e);

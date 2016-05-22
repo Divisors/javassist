@@ -17,10 +17,18 @@
 package javassist.bytecode.stackmap;
 
 import java.util.ArrayList;
+import java.util.List;
+
 import javassist.ClassPool;
-import javassist.CtClass;
 import javassist.NotFoundException;
-import javassist.bytecode.*;
+import javassist.bytecode.BadBytecode;
+import javassist.bytecode.ByteArray;
+import javassist.bytecode.Bytecode;
+import javassist.bytecode.CodeAttribute;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.MethodInfo;
+import javassist.bytecode.StackMap;
+import javassist.bytecode.StackMapTable;
 
 /**
  * Stack map maker.
@@ -379,7 +387,7 @@ public class MapMaker extends Tracer {
      * their types are also fixed when they are found. 
      */
     private void fixTypes(byte[] code, TypedBlock[] blocks) throws NotFoundException, BadBytecode {
-        ArrayList preOrder = new ArrayList();
+        List<TypeData> preOrder = new ArrayList<>();
         int len = blocks.length;
         int index = 0;
         for (int i = 0; i < len; i++) {

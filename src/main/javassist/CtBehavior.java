@@ -16,9 +16,29 @@
 
 package javassist;
 
-import javassist.bytecode.*;
-import javassist.compiler.Javac;
+import java.lang.annotation.Annotation;
+
+import javassist.bytecode.AccessFlag;
+import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.AttributeInfo;
+import javassist.bytecode.BadBytecode;
+import javassist.bytecode.Bytecode;
+import javassist.bytecode.CodeAttribute;
+import javassist.bytecode.CodeIterator;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.Descriptor;
+import javassist.bytecode.ExceptionsAttribute;
+import javassist.bytecode.LineNumberAttribute;
+import javassist.bytecode.LocalVariableAttribute;
+import javassist.bytecode.LocalVariableTypeAttribute;
+import javassist.bytecode.MethodInfo;
+import javassist.bytecode.Opcode;
+import javassist.bytecode.ParameterAnnotationsAttribute;
+import javassist.bytecode.SignatureAttribute;
+import javassist.bytecode.StackMap;
+import javassist.bytecode.StackMapTable;
 import javassist.compiler.CompileError;
+import javassist.compiler.Javac;
 import javassist.expr.ExprEditor;
 
 /**
@@ -188,13 +208,14 @@ public abstract class CtBehavior extends CtMember {
      * @return the annotation if found, otherwise <code>null</code>.
      * @since 3.11
      */
-    public <A extends Annotation> A getAnnotation(Class<A> clz) throws ClassNotFoundException {
+    @Override
+	public <A extends Annotation> A getAnnotation(Class<A> clz) throws ClassNotFoundException {
        MethodInfo mi = getMethodInfo2();
        AnnotationsAttribute ainfo = (AnnotationsAttribute)
                    mi.getAttribute(AnnotationsAttribute.invisibleTag);  
        AnnotationsAttribute ainfo2 = (AnnotationsAttribute)
                    mi.getAttribute(AnnotationsAttribute.visibleTag);  
-       return (A)CtClassType.getAnnotationType(clz,
+       return (A) CtClassType.getAnnotationType(clz,
                                             getDeclaringClass().getClassPool(),
                                             ainfo, ainfo2);
     }
@@ -206,7 +227,7 @@ public abstract class CtBehavior extends CtMember {
      * @see #getAvailableAnnotations()
      * @since 3.1
      */
-    public Annotation[] getAnnotations() throws ClassNotFoundException {
+    public Object[] getAnnotations() throws ClassNotFoundException {
        return getAnnotations(false);
    }
 
@@ -219,7 +240,7 @@ public abstract class CtBehavior extends CtMember {
      * @see #getAnnotations()
      * @since 3.3
      */
-    public Annotation[][] getAvailableAnnotations() throws RuntimeException {
+    public Object[] getAvailableAnnotations() throws RuntimeException {
        try{
            return getAnnotations(true);
        } catch (ClassNotFoundException e){
@@ -227,12 +248,12 @@ public abstract class CtBehavior extends CtMember {
        }
     }
 
-    private Annotation[] getAnnotations(boolean ignoreNotFound) throws ClassNotFoundException {
+    private Object[] getAnnotations(boolean ignoreNotFound) throws ClassNotFoundException {
        MethodInfo mi = getMethodInfo2();
        AnnotationsAttribute ainfo = (AnnotationsAttribute) mi.getAttribute(AnnotationsAttribute.invisibleTag);  
        AnnotationsAttribute ainfo2 = (AnnotationsAttribute)
                    mi.getAttribute(AnnotationsAttribute.visibleTag);  
-       return (Annotation[]) CtClassType.toAnnotationType(ignoreNotFound,
+       return CtClassType.toAnnotationType(ignoreNotFound,
                                            getDeclaringClass().getClassPool(),
                                            ainfo, ainfo2);
     }
@@ -248,7 +269,7 @@ public abstract class CtBehavior extends CtMember {
      * @see #getAnnotations()
      * @since 3.1
      */
-    public Annotation[][] getParameterAnnotations() throws ClassNotFoundException {
+    public Object[][] getParameterAnnotations() throws ClassNotFoundException {
         return getParameterAnnotations(false);
     }
 

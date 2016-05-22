@@ -309,14 +309,14 @@ public class ControlFlow {
          * in this block. 
          */
         public Catcher[] catchers() {
-            ArrayList catchers = new ArrayList();
+            ArrayList<Catcher> catchers = new ArrayList<>();
             BasicBlock.Catch c = toCatch;
             while (c != null) {
                 catchers.add(new Catcher(c));
                 c = c.next;
             }
 
-            return (Catcher[])catchers.toArray(new Catcher[catchers.size()]);
+            return catchers.toArray(new Catcher[catchers.size()]);
         }
     }
 

@@ -63,7 +63,7 @@ public class CharMemberValue extends MemberValue {
         return new Character(getValue());
     }
 
-    Class getType(ClassLoader cl) {
+    Class<?> getType(ClassLoader cl) {
         return char.class;
     }
 

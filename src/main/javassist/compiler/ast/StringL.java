@@ -22,7 +22,8 @@ import javassist.compiler.CompileError;
  * String literal.
  */
 public class StringL extends ASTree {
-    protected String text;
+	private static final long serialVersionUID = 4872959613607194275L;
+	protected String text;
 
     public StringL(String t) {
         text = t;

@@ -63,7 +63,7 @@ public class StringMemberValue extends MemberValue {
         return getValue();
     }
 
-    Class getType(ClassLoader cl) {
+    Class<String> getType(ClassLoader cl) {
         return String.class;
     }
 

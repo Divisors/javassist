@@ -35,7 +35,7 @@ public final class ConstPool {
     LongVector items;
     int numOfItems;
     int thisClassInfo;
-    HashMap itemsCache;
+    HashMap<ConstInfo, ConstInfo> itemsCache;
 
     /**
      * <code>CONSTANT_Class</code>
@@ -834,7 +834,7 @@ public final class ConstPool {
      * @param classnames        the map or null.
      * @return the index of the copied item into the destination ClassPool.
      */
-    public int copy(int n, ConstPool dest, Map classnames) {
+    public int copy(int n, ConstPool dest, Map<String, String> classnames) {
         if (n == 0)
             return 0;
 
@@ -1119,8 +1119,8 @@ public final class ConstPool {
      *
      * @return a set of class names (<code>String</code> objects).
      */
-    public Set getClassNames() {
-        HashSet result = new HashSet();
+    public Set<String> getClassNames() {
+        HashSet<String> result = new HashSet<>();
         LongVector v = items;
         int size = numOfItems;
         for (int i = 1; i < size; ++i) {
@@ -1152,7 +1152,7 @@ public final class ConstPool {
      * @param classnames        specifies pairs of replaced and substituted
      *                          name.
      */
-    public void renameClass(Map classnames) {
+    public void renameClass(Map<String, String> classnames) {
         LongVector v = items;
         int size = numOfItems;
         for (int i = 1; i < size; ++i) {
@@ -1177,8 +1177,8 @@ public final class ConstPool {
         }
     }
 
-    private static HashMap makeItemsCache(LongVector items) {
-        HashMap cache = new HashMap();
+    private static HashMap<ConstInfo, ConstInfo> makeItemsCache(LongVector items) {
+        HashMap<ConstInfo, ConstInfo> cache = new HashMap<>();
         int i = 1;
         while (true) {
             ConstInfo info = items.elementAt(i++);
@@ -1284,9 +1284,9 @@ abstract class ConstInfo {
     public abstract int getTag();
 
     public String getClassName(ConstPool cp) { return null; }
-    public void renameClass(ConstPool cp, String oldName, String newName, HashMap cache) {}
-    public void renameClass(ConstPool cp, Map classnames, HashMap cache) {}
-    public abstract int copy(ConstPool src, ConstPool dest, Map classnames);
+    public void renameClass(ConstPool cp, String oldName, String newName, HashMap<ConstInfo, ConstInfo> cache) {}
+    public void renameClass(ConstPool cp, Map<String, String> classnames, HashMap<ConstInfo, ConstInfo> cache) {}
+    public abstract int copy(ConstPool src, ConstPool dest, Map<String, String> classnames);
                         // ** classnames is a mapping between JVM names.
 
     public abstract void write(DataOutputStream out) throws IOException;
@@ -1307,7 +1307,7 @@ class ConstInfoPadding extends ConstInfo {
 
     public int getTag() { return 0; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         return dest.addConstInfoPadding();
     }
 
@@ -1344,7 +1344,7 @@ class ClassInfo extends ConstInfo {
         return cp.getUtf8Info(name);
     }
 
-    public void renameClass(ConstPool cp, String oldName, String newName, HashMap cache) {
+    public void renameClass(ConstPool cp, String oldName, String newName, HashMap<ConstInfo, ConstInfo> cache) {
         String nameStr = cp.getUtf8Info(name);
         String newNameStr = null;
         if (nameStr.equals(oldName))
@@ -1365,7 +1365,7 @@ class ClassInfo extends ConstInfo {
             }
     }
 
-    public void renameClass(ConstPool cp, Map map, HashMap cache) {
+    public void renameClass(ConstPool cp, Map<String, String> map, HashMap<ConstInfo, ConstInfo> cache) {
         String oldName = cp.getUtf8Info(name);
         String newName = null;
         if (oldName.charAt(0) == '[') {
@@ -1390,7 +1390,7 @@ class ClassInfo extends ConstInfo {
         }
     }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         String classname = src.getUtf8Info(name);
         if (map != null) {
             String newname = (String)map.get(classname);
@@ -1442,7 +1442,7 @@ class NameAndTypeInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public void renameClass(ConstPool cp, String oldName, String newName, HashMap cache) {
+    public void renameClass(ConstPool cp, String oldName, String newName, HashMap<ConstInfo, ConstInfo> cache) {
         String type = cp.getUtf8Info(typeDescriptor);
         String type2 = Descriptor.rename(type, oldName, newName);
         if (type != type2)
@@ -1455,7 +1455,7 @@ class NameAndTypeInfo extends ConstInfo {
             }
     }
 
-    public void renameClass(ConstPool cp, Map map, HashMap cache) {
+    public void renameClass(ConstPool cp, Map<String, String> map, HashMap<ConstInfo, ConstInfo> cache) {
         String type = cp.getUtf8Info(typeDescriptor);
         String type2 = Descriptor.rename(type, map);
         if (type != type2)
@@ -1468,7 +1468,7 @@ class NameAndTypeInfo extends ConstInfo {
             }
     }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         String mname = src.getUtf8Info(memberName);
         String tdesc = src.getUtf8Info(typeDescriptor);
         tdesc = Descriptor.rename(tdesc, map);
@@ -1518,7 +1518,7 @@ abstract class MemberrefInfo extends ConstInfo {
             return false;
     }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         int classIndex2 = src.getItem(classIndex).copy(src, dest, map);
         int ntIndex2 = src.getItem(nameAndTypeIndex).copy(src, dest, map);
         return copy2(dest, classIndex2, ntIndex2);
@@ -1624,7 +1624,7 @@ class StringInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         return dest.addStringInfo(src.getUtf8Info(string));
     }
 
@@ -1661,7 +1661,7 @@ class IntegerInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         return dest.addIntegerInfo(value);
     }
 
@@ -1698,7 +1698,7 @@ class FloatInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         return dest.addFloatInfo(value);
     }
 
@@ -1735,7 +1735,7 @@ class LongInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         return dest.addLongInfo(value);
     }
 
@@ -1775,7 +1775,7 @@ class DoubleInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         return dest.addDoubleInfo(value);
     }
 
@@ -1814,7 +1814,7 @@ class Utf8Info extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         return dest.addUtf8Info(string);
     }
 
@@ -1859,7 +1859,7 @@ class MethodHandleInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
        return dest.addMethodHandleInfo(refKind,
                            src.getItem(refIndex).copy(src, dest, map));
     }
@@ -1903,7 +1903,7 @@ class MethodTypeInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public void renameClass(ConstPool cp, String oldName, String newName, HashMap cache) {
+    public void renameClass(ConstPool cp, String oldName, String newName, HashMap<ConstInfo, ConstInfo> cache) {
         String desc = cp.getUtf8Info(descriptor);
         String desc2 = Descriptor.rename(desc, oldName, newName);
         if (desc != desc2)
@@ -1916,7 +1916,7 @@ class MethodTypeInfo extends ConstInfo {
             }
     }
 
-    public void renameClass(ConstPool cp, Map map, HashMap cache) {
+    public void renameClass(ConstPool cp, Map<String, String> map, HashMap<ConstInfo, ConstInfo> cache) {
         String desc = cp.getUtf8Info(descriptor);
         String desc2 = Descriptor.rename(desc, map);
         if (desc != desc2)
@@ -1929,7 +1929,7 @@ class MethodTypeInfo extends ConstInfo {
             }
     }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
         String desc = src.getUtf8Info(descriptor);
         desc = Descriptor.rename(desc, map);
         return dest.addMethodTypeInfo(dest.addUtf8Info(desc));
@@ -1975,7 +1975,7 @@ class InvokeDynamicInfo extends ConstInfo {
 
     public int getTag() { return tag; }
 
-    public int copy(ConstPool src, ConstPool dest, Map map) {
+    public int copy(ConstPool src, ConstPool dest, Map<String, String> map) {
        return dest.addInvokeDynamicInfo(bootstrap,
                            src.getItem(nameAndType).copy(src, dest, map));
     }

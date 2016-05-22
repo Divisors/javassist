@@ -29,7 +29,9 @@ import javassist.CannotCompileException;
  * @see javassist.CannotCompileException
  */
 public class CannotReflectException extends CannotCompileException {
-    public CannotReflectException(String msg) {
+	private static final long serialVersionUID = 2718335545324463770L;
+
+	public CannotReflectException(String msg) {
         super(msg);
     }
 }

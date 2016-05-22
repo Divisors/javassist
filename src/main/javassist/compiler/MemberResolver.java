@@ -16,15 +16,26 @@
 
 package javassist.compiler;
 
-import java.util.Hashtable;
 import java.lang.ref.WeakReference;
-import java.util.WeakHashMap;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.WeakHashMap;
 
-import javassist.*;
-import javassist.bytecode.*;
-import javassist.compiler.ast.*;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtField;
+import javassist.Modifier;
+import javassist.NotFoundException;
+import javassist.bytecode.AccessFlag;
+import javassist.bytecode.ClassFile;
+import javassist.bytecode.Descriptor;
+import javassist.bytecode.MethodInfo;
+import javassist.compiler.ast.ASTList;
+import javassist.compiler.ast.ASTree;
+import javassist.compiler.ast.Declarator;
+import javassist.compiler.ast.Keyword;
+import javassist.compiler.ast.Symbol;
 
 /* Code generator methods depending on javassist.* classes.
  */
@@ -100,7 +111,7 @@ public class MemberResolver implements TokenId {
         // If the class is an array type, the class file is null.
         // If so, search the super class java.lang.Object for clone() etc.
         if (cf != null) {
-            List list = cf.getMethods();
+            List<?> list = cf.getMethods();
             int n = list.size();
             for (int i = 0; i < n; ++i) {
                 MethodInfo minfo = (MethodInfo)list.get(i);
@@ -393,18 +404,15 @@ public class MemberResolver implements TokenId {
     /**
      * @param name      a qualified class name. e.g. java.lang.String
      */
-    public CtClass lookupClass(String name, boolean notCheckInner)
-        throws CompileError
-    {
-        Hashtable cache = getInvalidNames();
+	public CtClass lookupClass(String name, boolean notCheckInner) throws CompileError {
+        HashMap<String, String> cache = getInvalidNames();
         Object found = cache.get(name);
         if (found == INVALID)
             throw new CompileError("no such class: " + name);
         else if (found != null)
             try {
                 return classPool.get((String)found);
-            }
-            catch (NotFoundException e) {}
+            } catch (NotFoundException e) {}
 
         CtClass cc = null;
         try {
@@ -419,37 +427,36 @@ public class MemberResolver implements TokenId {
     }
 
     private static final String INVALID = "<invalid>";
-    private static WeakHashMap invalidNamesMap = new WeakHashMap();
-    private Hashtable invalidNames = null;
+    private static WeakHashMap<ClassPool, WeakReference<HashMap<String, String>>> invalidNamesMap = new WeakHashMap<>();
+    private HashMap<String, String> invalidNames = null;
 
     // for unit tests
     public static int getInvalidMapSize() { return invalidNamesMap.size(); }
 
-    private Hashtable getInvalidNames() {
-        Hashtable ht = invalidNames;
-        if (ht == null) {
-            synchronized (MemberResolver.class) {
-                WeakReference ref = (WeakReference)invalidNamesMap.get(classPool);
-                if (ref != null)
-                    ht = (Hashtable)ref.get();
+    private HashMap<String, String> getInvalidNames() {
+    	if (invalidNames != null)
+    		return this.invalidNames;
+        synchronized (MemberResolver.class) {
+            WeakReference<HashMap<String, String>> ref = invalidNamesMap.get(classPool);
+            HashMap<String, String> ht = null;
+            if (ref != null)
+                ht = ref.get();
 
-                if (ht == null) {
-                    ht = new Hashtable();
-                    invalidNamesMap.put(classPool, new WeakReference(ht));
-                }
+            if (ht == null) {
+                ht = new HashMap<>();
+                invalidNamesMap.put(classPool, new WeakReference<>(ht));
             }
 
             invalidNames = ht;
         }
-
-        return ht;
+        return this.invalidNames;
     }
 
     private CtClass searchImports(String orgName)
         throws CompileError
     {
         if (orgName.indexOf('.') < 0) {
-            Iterator it = classPool.getImportedPackages();
+            Iterator<?> it = classPool.getImportedPackages();
             while (it.hasNext()) {
                 String pac = (String)it.next();
                 String fqName = pac + '.' + orgName;

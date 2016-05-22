@@ -23,7 +23,8 @@ import javassist.compiler.CompileError;
  * Cast expression.
  */
 public class CastExpr extends ASTList implements TokenId {
-    protected int castType;
+	private static final long serialVersionUID = -5938319599099948712L;
+	protected int castType;
     protected int arrayDim;
 
     public CastExpr(ASTList className, int dim, ASTree expr) {

@@ -47,8 +47,9 @@ import javassist.bytecode.Descriptor;
  * @see CtClass#replaceClassName(ClassMap)
  * @see CtNewMethod#copy(CtMethod,String,CtClass,ClassMap)
  */
-public class ClassMap extends java.util.HashMap {
-    private ClassMap parent;
+public class ClassMap extends java.util.HashMap<String, String> {
+	private static final long serialVersionUID = 2892348176077337772L;
+	private ClassMap parent;
 
     /**
      * Constructs a hash table.
@@ -85,19 +86,21 @@ public class ClassMap extends java.util.HashMap {
      * <code>oldname</code> to <code>newname</code>.  See
      * <code>fix</code> method.
      *
-     * @param oldname   the original class name.
-     * @param newname   the substituted class name.
+     * @param oldName   the original class name.
+     * @param newName   the substituted class name.
+     * @return 
      * @see #fix(String)
      */
-    public void put(String oldname, String newname) {
-        if (oldname == newname)
-            return;
-
-        String oldname2 = toJvmName(oldname);
-        String s = (String)get(oldname2);
-        if (s == null || !s.equals(oldname2))
-            super.put(oldname2, toJvmName(newname));
-    }
+	public String put(String oldName, String newName) {
+		if (oldName == newName)
+			return oldName;
+		
+		String oldname2 = toJvmName(oldName);
+		String s = (String) get(oldname2);
+		if (s == null || !s.equals(oldname2))
+			return super.put(oldname2, toJvmName(newName));
+		return oldName;
+	}
 
     /**
      * Is equivalent to <code>put()</code> except that
@@ -118,8 +121,8 @@ public class ClassMap extends java.util.HashMap {
             super.put(oldname2, toJvmName(newname));
     }
 
-    protected final void put0(Object oldname, Object newname) {
-        super.put(oldname, newname);
+    protected final String put0(String oldname, String newname) {
+        return super.put(oldname, newname);
     }
 
     /**
@@ -132,8 +135,8 @@ public class ClassMap extends java.util.HashMap {
      * @see #toJvmName(String)
      * @see #toJavaName(String)
      */
-    public Object get(Object jvmClassName) {
-        Object found = super.get(jvmClassName);
+    public String get(String jvmClassName) {
+        String found = super.get(jvmClassName);
         if (found == null && parent != null)
             return parent.get(jvmClassName);
         else

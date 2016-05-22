@@ -39,18 +39,12 @@ public class FactoryHelper {
 
     static {
         try {
-            Class cl = Class.forName("java.lang.ClassLoader");
-            defineClass1 = SecurityActions.getDeclaredMethod(
-                        cl,
-                        "defineClass",
-                        new Class[] { String.class, byte[].class,
-                                      int.class, int.class });
+            Class<?> cl = Class.forName("java.lang.ClassLoader");
+			defineClass1 = SecurityActions.getDeclaredMethod(cl, "defineClass",
+					new Class<?>[] { String.class, byte[].class, int.class, int.class });
 
-            defineClass2 = SecurityActions.getDeclaredMethod(
-                        cl,
-                        "defineClass",
-                        new Class[] { String.class, byte[].class,
-                              int.class, int.class, ProtectionDomain.class });
+			defineClass2 = SecurityActions.getDeclaredMethod(cl, "defineClass",
+					new Class<?>[] { String.class, byte[].class, int.class, int.class, ProtectionDomain.class });
         }
         catch (Exception e) {
             throw new RuntimeException("cannot initialize");
@@ -62,8 +56,8 @@ public class FactoryHelper {
      *
      * @throws RuntimeException     if a given type is not a primitive type.
      */
-    public static final int typeIndex(Class type) {
-        Class[] list = primitiveTypes;
+    public static final int typeIndex(Class<?> type) {
+        Class<?>[] list = primitiveTypes;
         int n = list.length;
         for (int i = 0; i < n; i++)
             if (list[i] == type)
@@ -75,7 +69,7 @@ public class FactoryHelper {
     /**
      * <code>Class</code> objects representing primitive types.
      */
-    public static final Class[] primitiveTypes = {
+    public static final Class<?>[] primitiveTypes = {
         Boolean.TYPE, Byte.TYPE, Character.TYPE, Short.TYPE, Integer.TYPE,
         Long.TYPE, Float.TYPE, Double.TYPE, Void.TYPE
     };
@@ -131,11 +125,9 @@ public class FactoryHelper {
      *
      * @see #toClass(ClassFile,ClassLoader,ProtectionDomain)
      */
-    public static Class toClass(ClassFile cf, ClassLoader loader)
-        throws CannotCompileException
-    {
-        return toClass(cf, loader, null);
-    }
+	public static Class<?> toClass(ClassFile cf, ClassLoader loader) throws CannotCompileException {
+		return toClass(cf, loader, null);
+	}
 
     /**
      * Loads a class file by a given class loader.
@@ -143,9 +135,8 @@ public class FactoryHelper {
      * @param domain        if it is null, a default domain is used.
      * @since 3.3
      */
-    public static Class toClass(ClassFile cf, ClassLoader loader, ProtectionDomain domain)
-            throws CannotCompileException
-    {
+	public static Class<?> toClass(ClassFile cf, ClassLoader loader, ProtectionDomain domain)
+			throws CannotCompileException {
         try {
             byte[] b = toBytecode(cf);
             Method method;
@@ -174,24 +165,20 @@ public class FactoryHelper {
         }
     }
 
-    private static synchronized Class toClass2(Method method,
+    private static synchronized Class<?> toClass2(Method method,
                                         ClassLoader loader, Object[] args)
         throws Exception
     {
         SecurityActions.setAccessible(method, true);
-        Class clazz = (Class)method.invoke(loader, args);
+        Class<?> clazz = (Class<?>)method.invoke(loader, args);
         SecurityActions.setAccessible(method, false);
         return clazz;
     }
 
     private static byte[] toBytecode(ClassFile cf) throws IOException {
         ByteArrayOutputStream barray = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(barray);
-        try {
+        try (DataOutputStream out = new DataOutputStream(barray)){
             cf.write(out);
-        }
-        finally {
-            out.close();
         }
 
         return barray.toByteArray();
@@ -222,16 +209,10 @@ public class FactoryHelper {
                 new File(dir).mkdirs();
         }
 
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
-                new FileOutputStream(filename)));
-        try {
-            cf.write(out);
-        }
-        catch (IOException e) {
-            throw e;
-        }
-        finally {
-            out.close();
-        }
+		try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(filename)))) {
+			cf.write(out);
+		} catch (IOException e) {
+			throw e;
+		}
     }
 }

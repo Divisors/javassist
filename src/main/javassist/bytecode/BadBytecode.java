@@ -20,7 +20,9 @@ package javassist.bytecode;
  * Signals that a bad bytecode sequence has been found.
  */
 public class BadBytecode extends Exception {
-    public BadBytecode(int opcode) {
+	private static final long serialVersionUID = 1688819189769718464L;
+
+	public BadBytecode(int opcode) {
         super("bytecode " + opcode);
     }
 

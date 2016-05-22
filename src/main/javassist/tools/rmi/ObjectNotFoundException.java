@@ -17,7 +17,9 @@
 package javassist.tools.rmi;
 
 public class ObjectNotFoundException extends Exception {
-    public ObjectNotFoundException(String name) {
+	private static final long serialVersionUID = -6806161588911088298L;
+
+	public ObjectNotFoundException(String name) {
         super(name + " is not exported");
     }
 

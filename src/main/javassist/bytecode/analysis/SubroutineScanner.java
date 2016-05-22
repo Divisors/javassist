@@ -35,8 +35,8 @@ import javassist.bytecode.Opcode;
 public class SubroutineScanner implements Opcode {
 
     private Subroutine[] subroutines;
-    Map subTable = new HashMap();
-    Set done = new HashSet();
+    Map<Integer, Subroutine> subTable = new HashMap<>();
+    Set<Integer> done = new HashSet<>();
 
 
     public Subroutine[] scan(MethodInfo method) throws BadBytecode {
@@ -95,32 +95,32 @@ public class SubroutineScanner implements Opcode {
 
             return false;
         }
-
-        // All forms of return and throw end current code flow
-        if (Util.isReturn(opcode) || opcode == RET || opcode == ATHROW)
-            return false;
-
-        if (Util.isJumpInstruction(opcode)) {
-            int target = Util.getJumpTarget(pos, iter);
-            if (opcode == JSR || opcode == JSR_W) {
-                Subroutine s = (Subroutine) subTable.get(new Integer(target));
-                if (s == null) {
-                    s = new Subroutine(target, pos);
-                    subTable.put(new Integer(target), s);
-                    scan(target, iter, s);
-                } else {
-                    s.addCaller(pos);
-                }
-            } else {
-                scan(target, iter, sub);
-
-                // GOTO ends current code flow
-                if (Util.isGoto(opcode))
-                    return false;
-            }
-        }
-
-        return true;
+		
+		// All forms of return and throw end current code flow
+		if (Util.isReturn(opcode) || opcode == RET || opcode == ATHROW)
+			return false;
+		
+		if (Util.isJumpInstruction(opcode)) {
+			int target = Util.getJumpTarget(pos, iter);
+			if (opcode == JSR || opcode == JSR_W) {
+				Subroutine s = subTable.get(target);
+				if (s == null) {
+					s = new Subroutine(target, pos);
+					subTable.put(new Integer(target), s);
+					scan(target, iter, s);
+				} else {
+					s.addCaller(pos);
+				}
+			} else {
+				scan(target, iter, sub);
+				
+				// GOTO ends current code flow
+				if (Util.isGoto(opcode))
+					return false;
+			}
+		}
+		
+		return true;
     }
 
     private void scanLookupSwitch(int pos, CodeIterator iter, Subroutine sub) throws BadBytecode {

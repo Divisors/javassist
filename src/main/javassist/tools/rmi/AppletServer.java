@@ -106,9 +106,7 @@ public class AppletServer extends Webserver {
      *
      * @see javassist.tools.rmi.ObjectImporter#lookupObject(String)
      */
-    public synchronized int exportObject(String name, Object obj)
-        throws CannotCompileException
-    {
+	public synchronized int exportObject(String name, Object obj) throws CannotCompileException {
         Class clazz = obj.getClass();
         ExportedObject eo = new ExportedObject();
         eo.object = obj;

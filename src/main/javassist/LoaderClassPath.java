@@ -40,15 +40,16 @@ import java.lang.ref.WeakReference;
  * @see ClassClassPath
  */
 public class LoaderClassPath implements ClassPath {
-    private WeakReference clref;
+    private WeakReference<ClassLoader> clref;
 
     /**
      * Creates a search path representing a class loader.
      */
     public LoaderClassPath(ClassLoader cl) {
-        clref = new WeakReference(cl);
+        clref = new WeakReference<>(cl);
     }
 
+    @Override
     public String toString() {
         Object cl = null;
         if (clref != null)
@@ -62,6 +63,7 @@ public class LoaderClassPath implements ClassPath {
      * This method calls <code>getResourceAsStream(String)</code>
      * on the class loader.
      */
+    @Override
     public InputStream openClassfile(String classname) {
         String cname = classname.replace('.', '/') + ".class";
         ClassLoader cl = (ClassLoader)clref.get();
@@ -78,6 +80,7 @@ public class LoaderClassPath implements ClassPath {
      *
      * @return null if the class file could not be found. 
      */
+    @Override
     public URL find(String classname) {
         String cname = classname.replace('.', '/') + ".class";
         ClassLoader cl = (ClassLoader)clref.get();
@@ -90,6 +93,7 @@ public class LoaderClassPath implements ClassPath {
     /**
      * Closes this class path.
      */
+    @Override
     public void close() {
         clref = null;
     }

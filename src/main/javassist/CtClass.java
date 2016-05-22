@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.security.ProtectionDomain;
 import java.util.Collection;
@@ -517,17 +518,19 @@ public abstract class CtClass {
      *
      * @return a <code>Collection&lt;String&gt;</code> object.
      */
-    public synchronized Collection getRefClasses() {
+    public synchronized Collection<String> getRefClasses() {
         ClassFile cf = getClassFile2();
         if (cf != null) {
-            ClassMap cm = new ClassMap() {
-                public void put(String oldname, String newname) {
-                    put0(oldname, newname);
+            @SuppressWarnings("serial")
+			ClassMap cm = new ClassMap() {
+                public String put(String oldname, String newname) {
+                    return put0(oldname, newname);
                 }
 
-                public Object get(Object jvmClassName) {
-                    String n = toJavaName((String)jvmClassName);
+                public String get(String jvmClassName) {
+                    String n = toJavaName(jvmClassName);
                     put0(n, n);
+                    //TODO is this right?
                     return null;
                 }
 
@@ -588,7 +591,7 @@ public abstract class CtClass {
      * @return <code>true</code> if the annotation is found, otherwise <code>false</code>.
      * @since 3.11
      */
-    public boolean hasAnnotation(Class annotationType) {
+    public boolean hasAnnotation(Class<? extends Annotation> annotationType) {
         return hasAnnotation(annotationType.getName());
     }
 
@@ -614,7 +617,7 @@ public abstract class CtClass {
      * @return the annotation if found, otherwise <code>null</code>.
      * @since 3.11
      */
-    public Object getAnnotation(Class clz) throws ClassNotFoundException {
+    public <A extends Annotation> A getAnnotation(Class<A> clz) throws ClassNotFoundException {
         return null;
     }
 
@@ -1271,7 +1274,7 @@ public abstract class CtClass {
      * @see #toClass(java.lang.ClassLoader,ProtectionDomain)
      * @see ClassPool#toClass(CtClass)
      */
-    public Class toClass() throws CannotCompileException {
+    public Class<?> toClass() throws CannotCompileException {
         return getClassPool().toClass(this);
     }
 
@@ -1306,9 +1309,7 @@ public abstract class CtClass {
      * @see ClassPool#toClass(CtClass,java.lang.ClassLoader)
      * @since 3.3
      */
-    public Class toClass(ClassLoader loader, ProtectionDomain domain)
-        throws CannotCompileException
-    {
+	public Class<?> toClass(ClassLoader loader, ProtectionDomain domain) throws CannotCompileException {
         ClassPool cp = getClassPool();
         if (loader == null)
             loader = cp.getClassLoader();
@@ -1325,9 +1326,7 @@ public abstract class CtClass {
      *
      * @deprecated      Replaced by {@link #toClass(ClassLoader,ProtectionDomain)}
      */
-    public final Class toClass(ClassLoader loader)
-        throws CannotCompileException
-    {
+	public final Class<?> toClass(ClassLoader loader) throws CannotCompileException {
         return getClassPool().toClass(this, loader);
     }
 
@@ -1437,14 +1436,10 @@ public abstract class CtClass {
      */
     public byte[] toBytecode() throws IOException, CannotCompileException {
         ByteArrayOutputStream barray = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(barray);
-        try {
-            toBytecode(out);
+        try (DataOutputStream out = new DataOutputStream(barray)) {
+        	toBytecode(out);
         }
-        finally {
-            out.close();
-        }
-
+        
         return barray.toByteArray();
     }
 
@@ -1471,15 +1466,9 @@ public abstract class CtClass {
      * @param directoryName     it must end without a directory separator.
      * @see #debugWriteFile(String)
      */
-    public void writeFile(String directoryName)
-        throws CannotCompileException, IOException
-    {
-        DataOutputStream out = makeFileOutput(directoryName);
-        try {
+	public void writeFile(String directoryName) throws CannotCompileException, IOException {
+        try (DataOutputStream out = makeFileOutput(directoryName)) {
             toBytecode(out);
-        }
-        finally {
-            out.close();
         }
     }
 

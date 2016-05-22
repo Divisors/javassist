@@ -24,7 +24,8 @@ import javassist.compiler.MemberResolver;
  * Method call expression.
  */
 public class CallExpr extends Expr {
-    private MemberResolver.Method method;  // cached result of lookupMethod()
+	private static final long serialVersionUID = 6467190087868486053L;
+	private MemberResolver.Method method;  // cached result of lookupMethod()
 
     private CallExpr(ASTree _head, ASTList _tail) {
         super(TokenId.CALL, _head, _tail);

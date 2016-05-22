@@ -43,7 +43,7 @@ import java.net.URL;
  * @see LoaderClassPath
  */
 public class ClassClassPath implements ClassPath {
-    private Class thisClass;
+    private Class<?> thisClass;
 
     /** Creates a search path.
      *
@@ -51,7 +51,7 @@ public class ClassClassPath implements ClassPath {
      *              file.  <code>getResourceAsStream()</code> is called on
      *              this object.
      */
-    public ClassClassPath(Class c) {
+    public ClassClassPath(Class<?> c) {
         thisClass = c;
     }
 

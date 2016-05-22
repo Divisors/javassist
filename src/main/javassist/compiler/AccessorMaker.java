@@ -27,25 +27,22 @@ import java.util.HashMap;
 public class AccessorMaker {
     private CtClass clazz;
     private int uniqueNumber;
-    private HashMap accessors;
+    private HashMap<String, Object> accessors;
 
     static final String lastParamType = "javassist.runtime.Inner";
 
     public AccessorMaker(CtClass c) {
         clazz = c;
         uniqueNumber = 1;
-        accessors = new HashMap();
+        accessors = new HashMap<>();
     }
 
-    public String getConstructor(CtClass c, String desc, MethodInfo orig)
-        throws CompileError
-    {
+    public String getConstructor(CtClass c, String desc, MethodInfo orig) throws CompileError {
         String key = "<init>:" + desc;
-        String consDesc = (String)accessors.get(key);
-        if (consDesc != null)
-            return consDesc;     // already exists.
+        if (accessors.containsKey(key))
+        	return (String) accessors.get(key);// already exists.
 
-        consDesc = Descriptor.appendParameter(lastParamType, desc);
+        String consDesc = Descriptor.appendParameter(lastParamType, desc);
         ClassFile cf = clazz.getClassFile();    // turn on the modified flag. 
         try {
             ConstPool cp = cf.getConstPool();

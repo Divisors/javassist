@@ -16,10 +16,21 @@
 
 package javassist.tools.rmi;
 
-import javassist.*;
 import java.lang.reflect.Method;
-import java.util.Hashtable;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javassist.CannotCompileException;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtConstructor;
+import javassist.CtField;
+import javassist.CtMethod;
 import javassist.CtMethod.ConstParameter;
+import javassist.CtNewConstructor;
+import javassist.CtNewMethod;
+import javassist.Modifier;
+import javassist.NotFoundException;
+import javassist.Translator;
 
 /**
  * A stub-code generator.  It is used for producing a proxy class.
@@ -47,7 +58,7 @@ public class StubGenerator implements Translator {
     private static final String sampleClass = "javassist.tools.rmi.Sample";
 
     private ClassPool classPool;
-    private Hashtable proxyClasses;
+    private ConcurrentHashMap<String, CtClass> proxyClasses = new ConcurrentHashMap<>();
     private CtMethod forwardMethod;
     private CtMethod forwardStaticMethod;
 
@@ -58,9 +69,7 @@ public class StubGenerator implements Translator {
     /**
      * Constructs a stub-code generator.
      */
-    public StubGenerator() {
-        proxyClasses = new Hashtable();
-    }
+    public StubGenerator() {}
 
     /**
      * Initializes the object.
@@ -110,24 +119,20 @@ public class StubGenerator implements Translator {
      * @return          <code>false</code> if the proxy class
      *                  has been already produced.
      */
-    public synchronized boolean makeProxyClass(Class clazz)
-        throws CannotCompileException, NotFoundException
-    {
+	public synchronized boolean makeProxyClass(Class<?> clazz) throws CannotCompileException, NotFoundException {
         String classname = clazz.getName();
         if (proxyClasses.get(classname) != null)
             return false;
         else {
-            CtClass ctclazz = produceProxyClass(classPool.get(classname),
-                                                clazz);
+			CtClass ctclazz = produceProxyClass(classPool.get(classname), clazz);
             proxyClasses.put(classname, ctclazz);
             modifySuperclass(ctclazz);
             return true;
         }
     }
 
-    private CtClass produceProxyClass(CtClass orgclass, Class orgRtClass)
-        throws CannotCompileException, NotFoundException
-    {
+	private CtClass produceProxyClass(CtClass orgclass, Class<?> orgRtClass)
+			throws CannotCompileException, NotFoundException {
         int modify = orgclass.getModifiers();
         if (Modifier.isAbstract(modify) || Modifier.isNative(modify)
             || !Modifier.isPublic(modify))
@@ -166,7 +171,7 @@ public class StubGenerator implements Translator {
         }
     }
 
-    private CtClass toCtClass(Class rtclass) throws NotFoundException {
+    private CtClass toCtClass(Class<?> rtclass) throws NotFoundException {
         String name;
         if (!rtclass.isArray())
             name = rtclass.getName();
@@ -183,21 +188,17 @@ public class StubGenerator implements Translator {
         return classPool.get(name);
     }
 
-    private CtClass[] toCtClass(Class[] rtclasses) throws NotFoundException {
-        int n = rtclasses.length;
-        CtClass[] ctclasses = new CtClass[n];
-        for (int i = 0; i < n; ++i)
+    private CtClass[] toCtClass(Class<?>[] rtclasses) throws NotFoundException {
+        CtClass[] ctclasses = new CtClass[rtclasses.length];
+        for (int i = 0, n = rtclasses.length; i < n; ++i)
             ctclasses[i] = toCtClass(rtclasses[i]);
-
         return ctclasses;
     }
 
     /* ms must not be an array of CtMethod.  To invoke a method ms[i]
      * on a server, a client must send i to the server.
      */
-    private void addMethods(CtClass proxy, Method[] ms)
-        throws CannotCompileException, NotFoundException
-    {
+	private void addMethods(CtClass proxy, Method[] ms) throws CannotCompileException, NotFoundException {
         CtMethod wmethod;
         for (int i = 0; i < ms.length; ++i) {
             Method m = ms[i];

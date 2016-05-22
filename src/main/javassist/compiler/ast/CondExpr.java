@@ -22,7 +22,9 @@ import javassist.compiler.CompileError;
  * Conditional expression.
  */
 public class CondExpr extends ASTList {
-    public CondExpr(ASTree cond, ASTree thenp, ASTree elsep) {
+	private static final long serialVersionUID = 5259064316096978698L;
+
+	public CondExpr(ASTree cond, ASTree thenp, ASTree elsep) {
         super(cond, new ASTList(thenp, new ASTList(elsep)));
     }
 

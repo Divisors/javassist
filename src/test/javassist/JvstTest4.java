@@ -7,7 +7,7 @@ import java.io.FileOutputStream;
 import java.util.HashSet;
 
 import javassist.bytecode.*;
-import javassist.bytecode.annotation.Annotation;
+import javassist.bytecode.annotation.CtAnnotation;
 import javassist.expr.*;
 
 public class JvstTest4 extends JvstTestRoot {
@@ -1074,7 +1074,7 @@ public class JvstTest4 extends JvstTestRoot {
         ConstPool cp = cf.getConstPool();
         AnnotationsAttribute attr
             = new AnnotationsAttribute(cp, AnnotationsAttribute.visibleTag);
-        Annotation a = new Annotation(anno.getName(), cp);
+        CtAnnotation a = new CtAnnotation(anno.getName(), cp);
         a.addMemberValue("value", new javassist.bytecode.annotation.StringMemberValue("file/path", cp));
         attr.setAnnotation(a);
         m.getMethodInfo().addAttribute(attr);

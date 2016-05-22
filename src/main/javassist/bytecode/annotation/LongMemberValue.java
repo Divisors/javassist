@@ -59,11 +59,11 @@ public class LongMemberValue extends MemberValue {
         setValue(0L);
     }
 
-    Object getValue(ClassLoader cl, ClassPool cp, Method m) {
-        return new Long(getValue());
+    Long getValue(ClassLoader cl, ClassPool cp, Method m) {
+        return getValue();
     }
 
-    Class getType(ClassLoader cl) {
+    Class<?> getType(ClassLoader cl) {
         return long.class;
     }
 

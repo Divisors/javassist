@@ -16,18 +16,22 @@
 
 package javassist.compiler;
 
-public final class KeywordTable extends java.util.HashMap {
-    public KeywordTable() { super(); }
+import java.util.HashMap;
+
+public final class KeywordTable extends HashMap<String, Integer> {
+	private static final long serialVersionUID = -2552685673310822958L;
+
+	public KeywordTable() { super(); }
 
     public int lookup(String name) {
-        Object found = get(name);
+        Integer found = get(name);
         if (found == null)
             return -1;
         else
-            return ((Integer)found).intValue();
+            return found;
     }
 
     public void append(String name, int t) {
-        put(name, new Integer(t));
+        put(name, t);
     }
 }

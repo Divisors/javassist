@@ -19,8 +19,9 @@ package javassist.compiler;
 import java.util.HashMap;
 import javassist.compiler.ast.Declarator;
 
-public final class SymbolTable extends HashMap {
-    private SymbolTable parent;
+public final class SymbolTable extends HashMap<String, Declarator> {
+	private static final long serialVersionUID = -5270810980735558192L;
+	private SymbolTable parent;
 
     public SymbolTable() { this(null); }
 

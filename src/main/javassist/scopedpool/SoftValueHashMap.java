@@ -19,7 +19,9 @@ package javassist.scopedpool;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,47 +32,91 @@ import java.util.Set;
  * @version <tt>$Revision: 1.4 $</tt>
  * @author <a href="mailto:bill@jboss.org">Bill Burke</a>
  */
-public class SoftValueHashMap extends AbstractMap implements Map {
-    private static class SoftValueRef extends SoftReference {
-        public Object key;
+public class SoftValueHashMap<K, V> extends AbstractMap<K, V> {
+	 
+    private class SoftValueRef extends SoftReference<V> {
+        public K key;
 
-        private SoftValueRef(Object key, Object val, ReferenceQueue q) {
-            super(val, q);
+        private SoftValueRef(K key, V val) {
+            super(val, SoftValueHashMap.this.queue);
             this.key = key;
         }
+    }
+    private abstract class SoftSetView<E> extends AbstractSet<E> {
+    	@Override
+    	public final void clear() {
+    		SoftValueHashMap.this.clear();
+    	}
+    	@Override
+    	public final int size() {
+    		return SoftValueHashMap.this.size();
+    	}
+    }
+    private class EntrySetView extends SoftSetView<Entry<K, V>> {
+		@Override
+		public Iterator<Entry<K, V>> iterator() {
+			return new Iterator<Entry<K, V>>() {
 
-        private static SoftValueRef create(Object key, Object val,
-                ReferenceQueue q) {
-            if (val == null)
-                return null;
-            else
-                return new SoftValueRef(key, val, q);
-        }
+				@Override
+				public boolean hasNext() {
+					// TODO Auto-generated method stub
+					return false;
+				}
 
+				@Override
+				public Entry<K, V> next() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+				
+			};
+		}
+
+		@Override
+		public boolean add(Entry<K, V> e) {
+			return SoftValueHashMap.this.put(e.getKey(), e.getValue()) != e.getValue();
+		}
+
+		@Override
+		public boolean remove(Object o) {
+			if (!(o instanceof Entry))
+				return false;
+			Entry<?, ?> e = (Entry<?, ?>) o;
+			return SoftValueHashMap.this.remove(e.getKey(), e.getValue());
+		}
+		
+		@Override
+		public boolean contains(Object o) {
+			if (!(o instanceof Entry))
+				return false;
+			Entry<?, ?> e = (Entry<?, ?>) o;
+			return SoftValueHashMap.this.get(e.getKey()) == e.getValue();
+		}
     }
 
     /**
      * Returns a set of the mappings contained in this hash table.
      */
-    public Set entrySet() {
+	public Set<Entry<K, V>> entrySet() {
         processQueue();
-        return hash.entrySet();
+        return new EntrySetView();
     }
 
     /* Hash table mapping WeakKeys to values */
-    private Map hash;
+    private Map<K, SoftValueRef> hash;
 
     /* Reference queue for cleared WeakKeys */
-    private ReferenceQueue queue = new ReferenceQueue();
+    private final ReferenceQueue<? super V> queue = new ReferenceQueue<>();
 
     /*
      * Remove all invalidated entries from the map, that is, remove all entries
      * whose values have been discarded.
      */
-    private void processQueue() {
+    @SuppressWarnings("unchecked")
+	private void processQueue() {
         SoftValueRef ref;
         while ((ref = (SoftValueRef)queue.poll()) != null) {
-            if (ref == (SoftValueRef)hash.get(ref.key)) {
+            if (ref == hash.get(ref.key)) {
                 // only remove if it is the *exact* same WeakValueRef
                 //
                 hash.remove(ref.key);
@@ -95,7 +141,7 @@ public class SoftValueHashMap extends AbstractMap implements Map {
      *             factor is nonpositive
      */
     public SoftValueHashMap(int initialCapacity, float loadFactor) {
-        hash = new HashMap(initialCapacity, loadFactor);
+        this.hash = new HashMap<>(initialCapacity, loadFactor);
     }
 
     /**
@@ -109,7 +155,7 @@ public class SoftValueHashMap extends AbstractMap implements Map {
      *             If the initial capacity is less than zero
      */
     public SoftValueHashMap(int initialCapacity) {
-        hash = new HashMap(initialCapacity);
+        hash = new HashMap<>(initialCapacity);
     }
 
     /**
@@ -117,7 +163,7 @@ public class SoftValueHashMap extends AbstractMap implements Map {
      * initial capacity and the default load factor, which is <code>0.75</code>.
      */
     public SoftValueHashMap() {
-        hash = new HashMap();
+        hash = new HashMap<>();
     }
 
     /**
@@ -129,7 +175,7 @@ public class SoftValueHashMap extends AbstractMap implements Map {
      * 
      * @param t     the map whose mappings are to be placed in this map.
      */
-    public SoftValueHashMap(Map t) {
+    public SoftValueHashMap(Map<? extends K, ? extends V> t) {
         this(Math.max(2 * t.size(), 11), 0.75f);
         putAll(t);
     }
@@ -177,12 +223,9 @@ public class SoftValueHashMap extends AbstractMap implements Map {
      * @param key
      *            The key whose associated value, if any, is to be returned.
      */
-    public Object get(Object key) {
+	public V get(Object key) {
         processQueue();
-        SoftReference ref = (SoftReference)hash.get(key);
-        if (ref != null)
-            return ref.get();
-        return null;
+        return dereference(hash.get(key));
     }
 
     /**
@@ -200,12 +243,10 @@ public class SoftValueHashMap extends AbstractMap implements Map {
      * @return The previous value to which this key was mapped, or
      *         <code>null</code> if if there was no mapping for the key
      */
-    public Object put(Object key, Object value) {
+    @Override
+    public V put(K key, V value) {
         processQueue();
-        Object rtn = hash.put(key, SoftValueRef.create(key, value, queue));
-        if (rtn != null)
-            rtn = ((SoftReference)rtn).get();
-        return rtn;
+        return dereference(hash.put(key, reference(key, value)));
     }
 
     /**
@@ -218,9 +259,9 @@ public class SoftValueHashMap extends AbstractMap implements Map {
      * @return The value to which this key was mapped, or <code>null</code> if
      *         there was no mapping for the key.
      */
-    public Object remove(Object key) {
+    public V remove(Object key) {
         processQueue();
-        return hash.remove(key);
+        return dereference(hash.remove(key));
     }
 
     /**
@@ -230,4 +271,16 @@ public class SoftValueHashMap extends AbstractMap implements Map {
         processQueue();
         hash.clear();
     }
+	
+	private SoftValueRef reference(K key, V val) {
+		if (val == null)
+			return null;
+		else
+			return new SoftValueRef(key, val);
+	}
+	private V dereference(SoftValueRef ref) {
+		if (ref == null)
+			return null;
+		return ref.get();
+	}
 }

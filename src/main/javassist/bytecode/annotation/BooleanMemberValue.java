@@ -62,7 +62,7 @@ public class BooleanMemberValue extends MemberValue {
         return new Boolean(getValue());
     }
 
-    Class getType(ClassLoader cl) {
+    Class<?> getType(ClassLoader cl) {
         return boolean.class;
     }
 

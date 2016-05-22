@@ -31,40 +31,37 @@ public class ArrayMemberValue extends MemberValue {
     MemberValue type;
     MemberValue[] values;
 
-    /**
-     * Constructs an array.  The initial value or type are not specified.
-     */
-    public ArrayMemberValue(ConstPool cp) {
-        super('[', cp);
-        type = null;
-        values = null;
-    }
+	/**
+	 * Constructs an array. The initial value or type are not specified.
+	 */
+	public ArrayMemberValue(ConstPool cp) {
+		super('[', cp);
+		this.type = null;
+		this.values = null;
+	}
 
     /**
      * Constructs an array.  The initial value is not specified.
      *
-     * @param t         the type of the array elements.
+     * @param type         the type of the array elements.
      */
-    public ArrayMemberValue(MemberValue t, ConstPool cp) {
+    public ArrayMemberValue(MemberValue type, ConstPool cp) {
         super('[', cp);
-        type = t;
-        values = null;
+        this.type = type;
+        this.values = null;
     }
 
-    Object getValue(ClassLoader cl, ClassPool cp, Method method)
-        throws ClassNotFoundException
-    {
+    Object getValue(ClassLoader cl, ClassPool cp, Method method) throws ClassNotFoundException {
         if (values == null)
             throw new ClassNotFoundException(
                         "no array elements found: " + method.getName());
 
         int size = values.length;
-        Class clazz;
+        Class<?> clazz;
         if (type == null) {
             clazz = method.getReturnType().getComponentType();
             if (clazz == null || size > 0)
-                throw new ClassNotFoundException("broken array type: "
-                                                 + method.getName());
+                throw new ClassNotFoundException("broken array type: " + method.getName());
         }
         else
             clazz = type.getType(cl);
@@ -76,7 +73,7 @@ public class ArrayMemberValue extends MemberValue {
         return a;
     }
 
-    Class getType(ClassLoader cl) throws ClassNotFoundException {
+    Class<?> getType(ClassLoader cl) throws ClassNotFoundException {
         if (type == null)
             throw new ClassNotFoundException("no array type specified");
 

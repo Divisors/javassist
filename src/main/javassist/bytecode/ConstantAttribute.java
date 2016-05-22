@@ -65,9 +65,8 @@ public class ConstantAttribute extends AttributeInfo {
      * @param classnames        pairs of replaced and substituted
      *                          class names.
      */
-    public AttributeInfo copy(ConstPool newCp, Map classnames) {
-        int index = getConstPool().copy(getConstantValue(), newCp,
-                                        classnames);
+    public AttributeInfo copy(ConstPool newCp, Map<String, String> classnames) {
+		int index = getConstPool().copy(getConstantValue(), newCp, classnames);
         return new ConstantAttribute(newCp, index);
     }
 }
