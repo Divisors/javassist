@@ -420,6 +420,14 @@ public class ClassPool {
         checkNotFrozen(newName);
         cacheCtClass(newName, clazz, false);
     }
+    
+    public CtClass get(Class<?> clazz) {
+    	try {
+			return get(clazz.getCanonicalName());
+		} catch (NotFoundException e) {
+			throw new RuntimeException(e);
+		}
+    }
 
     /**
      * Reads a class file from the source and returns a reference
